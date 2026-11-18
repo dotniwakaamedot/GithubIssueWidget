@@ -1,0 +1,15 @@
+# 人・Agent 向けの記入例。runner は読み込まず、権限を付与しない。
+[project]
+name = "GithubIssueWidget"
+repository = "dotniwakaamedot/GithubIssueWidget"
+base_branch = "configure-after-verification"
+pr_base = "configure-after-verification"
+run_directory = "docs/agent-runs"
+worktree_directory = ".worktrees"
+issue_provider = "github"
+
+[identity]
+auth_provider = "configure-in-environment"
+
+[verification]
+test_command = "configure-after-implementation"
