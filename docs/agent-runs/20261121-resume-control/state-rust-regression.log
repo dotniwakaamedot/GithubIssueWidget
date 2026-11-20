@@ -1,0 +1,91 @@
+   Compiling github-issue-widget v0.1.0 (D:\Projects\GithubIssueWidget\widget\src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.79s
+     Running unittests src\main.rs (target\debug\deps\github_issue_widget-fc25f1eb6ae85386.exe)
+
+running 76 tests
+test creation::tests::only_supported_statuses_are_accepted ... ok
+test creation::tests::blank_title_is_rejected_without_network ... ok
+test creation::tests::missing_label_prevents_creation ... ok
+test movement::tests::mock_request_stops_on_early_eof ... ok
+test creation::tests::failed_record_update_preserves_known_issue_number_and_blocks_retry ... ok
+test movement::tests::changed_issue_and_missing_label_never_send_patch ... ok
+test movement::tests::lost_label_response_is_not_reported_as_success ... ok
+test creation::tests::lost_response_record_survives_restart_until_acknowledged ... ok
+test creation::tests::submitted_payload_contains_the_selected_label ... ok
+test tests::authenticated_github_readonly_repository_and_issues ... ignored, reads a specified GitHub repository with a supplied token; never writes
+test creation::tests::conflicting_status_labels_after_creation_are_partial ... ok
+test creation::tests::unrelated_labels_do_not_prevent_creation_success ... ok
+test tests::board_classification_prioritizes_status_labels_and_excludes_pull_requests ... ok
+test tests::board_request_must_match_the_current_shared_connection ... ok
+test tests::board_snapshot_rejects_changed_or_removed_credentials ... ok
+test tests::board_rejects_unknown_github_state ... ok
+test tests::failed_settings_commit_keeps_previous_credential ... ok
+test movement::tests::a_rejected_step_after_a_success_reports_partial_application ... ok
+test tests::connection_rate_limit_blocks_later_issue_fetch ... ok
+test tests::duplicate_page_link_is_an_error ... ok
+test creation::tests::lost_create_response_is_uncertain_without_retry ... ok
+test creation::tests::rejected_write_clears_pending_record_without_retry ... ok
+test tests::ipc_test_identity_rejects_product_and_noncanonical_values ... ok
+test tests::isolated_windows_credential_lifecycle ... ignored, writes a unique synthetic Windows Credential Manager entry
+test tests::journal_failure_prevents_writing_credentials ... ok
+test tests::in_flight_board_is_not_returned_after_credential_change ... ok
+test tests::follows_repository_id_cursor_without_reconstructing_it ... ok
+test tests::lock_child ... ignored, helper launched by the separate-process lock test
+test tests::mutation_revision_rejects_changed_settings_and_credentials ... ok
+test tests::next_page_cannot_change_host_or_repository ... ok
+test tests::issue_rate_limit_blocks_later_connection_check ... ok
+test creation::tests::done_creation_requires_confirmed_closed_response ... ok
+test tests::public_github_next_link_smoke ... ignored, contacts a public GitHub repository
+test tests::public_github_rejects_invalid_synthetic_token ... ignored, contacts public GitHub with an invalid synthetic token
+test tests::quoted_parameters_do_not_forge_a_next_relation ... ok
+test tests::rate_child ... ignored, helper launched by the shared rate limit test
+test tests::api_error_bodies_do_not_leak_tokens_or_issue_titles ... ok
+test tests::ordinary_permission_error_does_not_start_cooldown ... ok
+test tests::rate_limit_waits_for_retry_after_and_primary_reset ... ok
+test tests::recovery_selects_only_unreferenced_generation ... ok
+test tests::later_page_failure_never_returns_partial_results ... ok
+test tests::repeated_reads_reuse_revision_only_while_connection_is_unchanged ... ok
+test tests::http_statuses_do_not_leak_token_in_errors ... ok
+test creation::tests::conflicting_status_labels_after_done_close_are_partial ... ok
+test tests::retry_after_header_controls_cooldown ... ok
+test tests::secondary_limit_403_starts_cooldown_before_any_retry ... ok
+test movement::tests::lost_state_patch_response_reports_unknown_partial_result ... ok
+test tests::separate_handles_cannot_mutate_configuration_at_once ... ok
+test movement::tests::final_status_conflict_is_not_reported_as_success ... ok
+test tests::windows_inflight_guard ... ignored, uses isolated Windows Credential Manager entries and child process
+test tests::windows_inflight_guard_child ... ignored, child of the isolated Windows in-flight test
+test tests::windows_ipc_guard ... ignored, uses isolated test-service credentials and a mock IPC child
+test tests::windows_ipc_guard_child ... ignored, child of the isolated test-service IPC test
+test tests::successful_commit_switches_reference_before_old_secret_is_removed ... ok
+test creation::tests::successful_creation_remains_recorded_until_acknowledged ... ok
+test tests::validates_repository_components ... ok
+test tests::short_page_with_next_still_fetches_all_pages ... ok
+test tests::opener_rejects_local_url_via_mock_ipc ... ok
+test creation::tests::partial_result_is_persisted_and_blocks_duplicate_creation ... ok
+test creation::tests::ignored_label_on_created_issue_is_partial_not_success ... ok
+test creation::tests::failed_done_close_reports_created_number_without_second_post ... ok
+test creation::tests::done_issue_missing_label_after_close_is_partial ... ok
+test tests::recovery_survives_deletion_failure_and_can_be_retried ... ok
+test creation::tests::mock_server_stops_if_the_expected_request_never_arrives ... ok
+test movement::tests::final_read_failure_is_not_reported_as_success ... ok
+test movement::tests::mock_accept_stops_when_no_client_connects ... ok
+test tests::fetches_more_than_one_thousand_issues ... ok
+test tests::replaces_settings_without_saving_a_token ... ok
+test movement::tests::multiple_status_labels_remove_only_obsolete_statuses ... ok
+test tests::recovery_handles_interruption_on_both_sides_of_commit ... ok
+test movement::tests::mock_request_stops_when_client_sends_nothing ... ok
+test tests::lock_excludes_an_independent_process ... ok
+test tests::rate_limit_deadline_is_shared_across_processes ... ok
+test movement::tests::unconfirmed_label_addition_stops_before_removal_or_state_change ... ok
+test movement::tests::unconfirmed_label_removal_stops_before_state_change ... ok
+test movement::tests::all_six_transitions_preserve_labels_added_after_the_initial_get ... ok
+
+test result: ok. 66 passed; 0 failed; 10 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running tests\opener_scope.rs (target\debug\deps\opener_scope-7d124b2b348401a4.exe)
+
+running 1 test
+test opener_url_scope_allows_only_expected_github_urls ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

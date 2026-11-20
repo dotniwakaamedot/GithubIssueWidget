@@ -1,0 +1,10 @@
+
+ RUN  v5.1.1 D:/Projects/GithubIssueWidget/widget
+
+································
+
+ Test Files  1 passed (1)
+      Tests  32 passed (32)
+   Start at  01:51:44
+   Duration  2.11s (tests 48%, environment 38%, import 10%, transform 4%)
+

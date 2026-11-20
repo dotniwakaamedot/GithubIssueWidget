@@ -45,6 +45,8 @@ GitHub の Fine-grained personal access token は対象リポジトリだけを�
 
 ボードは約60秒ごとに同期します。`status:todo`、`status:in-progress`、`status:done` ラベルを事前に GitHub 上で作成してください。存在しないラベルをアプリが自動作成することはありません。Issue 作成が途中で失敗したり結果が不明になった場合は、表示された結果と GitHub の状態を確認してから確認操作を行い、重複作成を避けてください。
 
+Closed の Issue はステータスラベルにかかわらず Done に表示します。Open の Issue はステータスラベルを Todo、In Progress、Done の順に優先し、該当ラベルがなければ Todo に表示します。ラベルと Open / Closed が一致しない場合は、GitHub 上の状態を確認してください。
+
 作成後に他のステータスラベルが同時に付いた場合も、作成済み Issue を示して確認を促します。GitHub 上でラベルと Open / Closed の状態を確認してください。
 
 Issue 作成フォームには作成先を表示します。接続先を変更する場合は、フォームの入力を確認して送信するか、キャンセルしてから設定を開いてください。

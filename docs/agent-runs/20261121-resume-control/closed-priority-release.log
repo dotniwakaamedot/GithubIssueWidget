@@ -1,0 +1,23 @@
+
+> github-issue-widget@0.1.0 tauri
+> tauri build --no-bundle
+
+        Info Looking up installed tauri packages to check mismatched versions...
+        Warn The bundle identifier "com.githubissuewidget.app" set in `"tauri.conf.json" identifier` ends with `.app`. This is not recommended because it conflicts with the application bundle extension on macOS.
+     Running beforeBuildCommand `npm run build`
+
+> github-issue-widget@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.8 building client environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.37 kB │ gzip:  0.27 kB
+dist/assets/index-Ad6Wo6ov.css    5.67 kB │ gzip:  1.74 kB
+dist/assets/index-CE5eMJzi.js   251.05 kB │ gzip: 77.32 kB
+✓ built in 428ms
+   Compiling github-issue-widget v0.1.0 (D:\Projects\GithubIssueWidget\widget\src-tauri)
+    Finished `release` profile [optimized] target(s) in 55.13s
+       Built application at: D:\Projects\GithubIssueWidget\widget\src-tauri\target\release\github-issue-widget.exe

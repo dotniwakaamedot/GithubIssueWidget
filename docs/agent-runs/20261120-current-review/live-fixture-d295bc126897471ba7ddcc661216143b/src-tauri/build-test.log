@@ -1,0 +1,4 @@
+   Compiling github-issue-widget v0.1.0 (D:\Projects\GithubIssueWidget\docs\agent-runs\20261120-current-review\live-fixture-d295bc126897471ba7ddcc661216143b\src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.00s
+  Executable unittests src\main.rs (target\debug\deps\github_issue_widget-fc25f1eb6ae85386.exe)
+  Executable tests\opener_scope.rs (target\debug\deps\opener_scope-7d124b2b348401a4.exe)

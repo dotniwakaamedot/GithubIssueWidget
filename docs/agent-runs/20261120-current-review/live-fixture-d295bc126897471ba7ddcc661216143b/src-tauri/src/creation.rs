@@ -221,19 +221,19 @@ mod tests {
     fn live_check_identity(value: &serde_json::Value, number: u64) {
         let marker = "giw-live-d295bc126897471ba7ddcc661216143b";
         let expected_title = format!("GitHub Issue Widget 検証 {marker}");
-        assert_eq!(value.get("number").and_then(|v| v.as_u64()), Some(number), "issue number mismatch");
+        assert!(value.get("number").and_then(|v| v.as_u64()) == Some(number), "issue number mismatch");
         assert!(value.get("title").and_then(|v| v.as_str()) == Some(expected_title.as_str()), "issue title mismatch");
         assert!(value.get("body").and_then(|v| v.as_str()).map(|body| body.contains(marker)).unwrap_or(false), "issue marker mismatch");
-        assert_eq!(value.get("html_url").and_then(|v| v.as_str()), Some(format!("https://github.com/dotniwakaamedot/GithubIssueWidget/issues/{number}").as_str()), "issue URL mismatch");
+        assert!(value.get("html_url").and_then(|v| v.as_str()) == Some(format!("https://github.com/dotniwakaamedot/GithubIssueWidget/issues/{number}").as_str()), "issue URL mismatch");
     }
 
     async fn live_checked_issue(client: &reqwest::Client, endpoint: &str, token: &str, cooldown: &RateCooldown, number: u64) -> ApiIssue {
         let url = reqwest::Url::parse(&format!("{endpoint}/issues/{number}")).expect("invalid issue URL");
         let response = get_api_response_locked(client, url, token, cooldown).await;
         assert!(response.is_ok(), "issue read failed");
-        let value: serde_json::Value = response.unwrap().json().await.expect("issue response invalid");
+        let value: serde_json::Value = response.unwrap().json().await.ok().expect("issue response invalid");
         live_check_identity(&value, number);
-        serde_json::from_value(value).expect("issue response invalid")
+        serde_json::from_value(value).ok().expect("issue response invalid")
     }
 
     fn live_verify_issue(issue: &ApiIssue, status: &str, require_extra: bool) {
@@ -278,6 +278,21 @@ mod tests {
     }
 
     #[test]
+    fn live_identity_failures_do_not_include_unexpected_number_or_url() {
+        let title = "GitHub Issue Widget 検証 giw-live-d295bc126897471ba7ddcc661216143b";
+        let body = "giw-live-d295bc126897471ba7ddcc661216143b";
+        let valid_url = "https://github.com/dotniwakaamedot/GithubIssueWidget/issues/42";
+        for (value, expected) in [
+            (serde_json::json!({"number":987654321, "title":title, "body":body, "html_url":valid_url}), "issue number mismatch"),
+            (serde_json::json!({"number":42, "title":title, "body":body, "html_url":"https://example.invalid/synthetic-secret"}), "issue URL mismatch"),
+        ] {
+            let error = std::panic::catch_unwind(|| live_check_identity(&value, 42)).expect_err("identity mismatch should fail");
+            let message = error.downcast_ref::<&str>().copied().or_else(|| error.downcast_ref::<String>().map(String::as_str)).unwrap_or("");
+            assert_eq!(message, expected);
+        }
+    }
+
+    #[test]
     #[ignore = "creates and moves one explicitly approved public GitHub test issue"]
     fn explicitly_approved_live_create_and_moves() {
         use std::io::Write;
@@ -300,13 +315,13 @@ mod tests {
             assert!(labels_response.is_ok(), "required labels read failed");
             let labels_response = labels_response.unwrap();
             assert!(!labels_response.headers().contains_key(reqwest::header::LINK), "label list requires pagination");
-            let labels: Vec<ApiLabel> = labels_response.json().await.expect("label list invalid");
+            let labels: Vec<ApiLabel> = labels_response.json().await.ok().expect("label list invalid");
             for required in ["status:todo", "status:in-progress", "status:done", "enhancement"] {
                 assert!(labels.iter().any(|label| label.name == required), "required label missing");
             }
             let response = get_api_response_locked(&client, reqwest::Url::parse(endpoint).unwrap(), &token, &cooldown).await;
             assert!(response.is_ok(), "repository read failed");
-            let repo: ApiRepository = response.unwrap().json().await.expect("repository response invalid");
+            let repo: ApiRepository = response.unwrap().json().await.ok().expect("repository response invalid");
             assert!(repo.id != 0 && repo.full_name.eq_ignore_ascii_case("dotniwakaamedot/GithubIssueWidget"), "repository mismatch");
             let issues_endpoint = format!("{endpoint}/issues");
             let mut url = reqwest::Url::parse(&issues_endpoint).unwrap();
@@ -318,7 +333,7 @@ mod tests {
                 assert!(response.is_ok(), "issue preflight failed");
                 let response = response.unwrap();
                 let next = next_page(response.headers(), &issues_endpoint, repo.id).expect("invalid next page");
-                let issues: Vec<serde_json::Value> = response.json().await.expect("issue preflight invalid");
+                let issues: Vec<serde_json::Value> = response.json().await.ok().expect("issue preflight invalid");
                 for issue in issues {
                     assert!(live_marker_absent(&issue), "existing marker or incomplete issue found");
                 }
@@ -339,7 +354,7 @@ mod tests {
             let add_url = format!("{endpoint}/issues/{number}/labels");
             let added = send_write_locked(client.post(add_url).json(&serde_json::json!({"labels":["enhancement"]})), &token, &cooldown).await;
             assert!(added.is_ok(), "extra label update failed");
-            let labels: Vec<ApiLabel> = added.ok().expect("extra label update failed").json().await.expect("label response invalid");
+            let labels: Vec<ApiLabel> = added.ok().expect("extra label update failed").json().await.ok().expect("label response invalid");
             assert!(labels.iter().any(|label| label.name == "enhancement"), "extra label not confirmed");
             let mut previous = "todo";
             for target in ["in-progress", "todo", "done", "in-progress", "done", "todo", "done"] {

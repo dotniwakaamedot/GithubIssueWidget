@@ -43,13 +43,31 @@ describe("window input", () => {
 });
 
 describe("moving issues", () => {
+  it("shows the actual GitHub state even when both issues are in Done", async () => {
+    mocks.invoke.mockImplementation((command: string) => {
+      if (command === "connection_info") return Promise.resolve({ owner: "a", repo: "b", has_token: true, revision: "revision-1" });
+      if (command === "pending_creation") return Promise.resolve(null);
+      if (command === "list_issues") return Promise.resolve([
+        { number: 1, title: "open in done", url: "https://github.com/a/b/issues/1", status: "done", state: "open", updated_at: "v1" },
+        { number: 2, title: "closed in done", url: "https://github.com/a/b/issues/2", status: "done", state: "closed", updated_at: "v2" },
+      ]);
+      throw new Error("unexpected command");
+    });
+    render(<App />);
+    const open = await screen.findByText("open in done");
+    const closed = screen.getByText("closed in done");
+    expect(open.closest("section")?.textContent).toContain("Done");
+    expect(open.closest("button")?.textContent).toContain("Open");
+    expect(closed.closest("button")?.textContent).toContain("Closed");
+  });
+
   it.each([
     ["todo", "Todo", "in-progress", "In Progress"], ["todo", "Todo", "done", "Done"],
     ["in-progress", "In Progress", "todo", "Todo"], ["in-progress", "In Progress", "done", "Done"],
     ["done", "Done", "todo", "Todo"], ["done", "Done", "in-progress", "In Progress"],
   ])("moves %s to %s via a refreshed board", async (source, sourceName, target, targetName) => {
     let lists = 0;
-    const original = { number: 42, title: "move me", url: "https://github.com/a/b/issues/42", status: source, updated_at: "v1" };
+    const original = { number: 42, title: "move me", url: "https://github.com/a/b/issues/42", status: source, state: source === "done" ? "closed" : "open", updated_at: "v1" };
     mocks.invoke.mockImplementation((command: string) => {
       if (command === "connection_info") return Promise.resolve({ owner: "a", repo: "b", has_token: true, revision: "revision-1" });
       if (command === "pending_creation") return Promise.resolve(null);
@@ -70,11 +88,11 @@ describe("moving issues", () => {
 
   it("refreshes after an uncertain move and keeps the error visible", async () => {
     let lists = 0;
-    const original = { number: 42, title: "move me", url: "https://github.com/a/b/issues/42", status: "todo", updated_at: "v1" };
+    const original = { number: 42, title: "move me", url: "https://github.com/a/b/issues/42", status: "todo", state: "open", updated_at: "v1" };
     mocks.invoke.mockImplementation((command: string) => {
       if (command === "connection_info") return Promise.resolve({ owner: "a", repo: "b", has_token: true, revision: "revision-1" });
       if (command === "pending_creation") return Promise.resolve(null);
-      if (command === "list_issues") { lists++; return Promise.resolve([original]); }
+      if (command === "list_issues") { lists++; return Promise.resolve([lists === 1 ? original : { ...original, status: "done" }]); }
       if (command === "move_issue") return Promise.reject("更新結果は不明です。");
       throw new Error("unexpected command");
     });
@@ -86,7 +104,8 @@ describe("moving issues", () => {
     await screen.findByText("更新結果は不明です。");
     await waitFor(() => expect(lists).toBe(2));
     expect(mocks.invoke).toHaveBeenCalledWith("move_issue", { expectedOwner: "a", expectedRepo: "b", expectedRevision: "revision-1", number: 42, expectedUpdatedAt: "v1", status: "done" });
-    expect(screen.getByText("move me").closest("section")?.textContent).toContain("Todo");
+    expect(screen.getByText("move me").closest("section")?.textContent).toContain("Done");
+    expect(screen.getByText("move me").closest("button")?.textContent).toContain("Open");
     expect(screen.getByText("更新結果は不明です。")).toBeTruthy();
   });
 });
@@ -362,7 +381,7 @@ describe("connection settings", () => {
       if (command === "connection_info") return Promise.resolve({ owner: "old-owner", repo: "old-repo", has_token: true, revision: "revision-1" });
       if (command === "pending_creation") return Promise.resolve(null);
       if (command === "list_issues") return ++listCalls === 1
-        ? Promise.resolve([{ number: 42, title: "previous issue", url: "https://github.com/a/b/issues/42", status: "todo", updated_at: "v1" }])
+        ? Promise.resolve([{ number: 42, title: "previous issue", url: "https://github.com/a/b/issues/42", status: "todo", state: "open", updated_at: "v1" }])
         : Promise.reject("別のウィンドウで接続先が変更されました。");
       throw new Error("unexpected command");
     });
@@ -411,10 +430,14 @@ describe("connection settings", () => {
 
   it("shows an already created issue when closing a Done issue fails", async () => {
     let pending = false;
+    let lists = 0;
     mocks.invoke.mockImplementation((command: string) => {
       if (command === "connection_info") return Promise.resolve({ owner: "test-owner", repo: "test-repo", has_token: true, revision: "revision-1" });
       if (command === "pending_creation") return Promise.resolve(pending ? { operation_id: "test-id", owner: "test-owner", repo: "test-repo", number: 123, phase: "partial" } : null);
-      if (command === "list_issues") return Promise.resolve([]);
+      if (command === "list_issues") {
+        lists++;
+        return Promise.resolve(pending ? [{ number: 123, title: "test title", url: "https://github.com/test-owner/test-repo/issues/123", status: "done", state: "open", updated_at: "v1" }] : []);
+      }
       if (command === "create_issue") { pending = true; return Promise.resolve({ kind: "partial", number: 123, url: "https://github.com/test-owner/test-repo/issues/123", message: "Issue は作成されましたがクローズできませんでした。", operation_id: "test-id" }); }
       throw new Error("unexpected command");
     });
@@ -427,8 +450,34 @@ describe("connection settings", () => {
     fireEvent.click(screen.getByRole("button", { name: "作成" }));
     expect(await screen.findByText(/Issue は作成されましたが/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "#123 を GitHub で開く" })).toBeTruthy();
+    const card = await screen.findByText("test title");
+    expect(lists).toBeGreaterThanOrEqual(2);
+    expect(card.closest("section")?.textContent).toContain("Done");
+    expect(card.closest("button")?.textContent).toContain("Open");
+    expect((screen.getByRole("button", { name: "Issue を作成" }) as HTMLButtonElement).disabled).toBe(true);
     expect(mocks.invoke.mock.calls.filter(([command]) => command === "create_issue")).toHaveLength(1);
     expect(mocks.invoke).toHaveBeenCalledWith("create_issue", expect.objectContaining({ expectedRevision: "revision-1" }));
+  });
+
+  it("clears stale cards if refreshing after a partial creation fails", async () => {
+    let pending = false;
+    mocks.invoke.mockImplementation((command: string) => {
+      if (command === "connection_info") return Promise.resolve({ owner: "test-owner", repo: "test-repo", has_token: true, revision: "revision-1" });
+      if (command === "pending_creation") return Promise.resolve(pending ? { operation_id: "test-id", owner: "test-owner", repo: "test-repo", number: 123, phase: "partial" } : null);
+      if (command === "list_issues") return pending ? Promise.reject("一覧を取得できませんでした。") : Promise.resolve([{ number: 42, title: "stale issue", url: "https://github.com/test-owner/test-repo/issues/42", status: "done", state: "closed", updated_at: "v1" }]);
+      if (command === "create_issue") { pending = true; return Promise.resolve({ kind: "partial", number: 123, url: "https://github.com/test-owner/test-repo/issues/123", message: "Issue は作成されましたがクローズできませんでした。", operation_id: "test-id" }); }
+      throw new Error("unexpected command");
+    });
+    render(<App />);
+    await screen.findByText("stale issue");
+    fireEvent.click(screen.getByRole("button", { name: "Done に Issue を作成" }));
+    fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "test title" } });
+    fireEvent.click(screen.getByRole("button", { name: "作成" }));
+    expect(await screen.findByText("一覧を取得できませんでした。")).toBeTruthy();
+    expect(screen.queryByText("stale issue")).toBeNull();
+    expect(screen.getByRole("button", { name: "#123 を GitHub で開く" })).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Issue を作成" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(mocks.invoke.mock.calls.filter(([command]) => command === "create_issue")).toHaveLength(1);
   });
 
   it("requires confirmation before retrying an unknown creation result", async () => {

@@ -79,7 +79,7 @@ struct ApiIssue {
 }
 
 #[derive(Serialize)]
-struct BoardIssue { number: u64, title: String, url: String, status: String, updated_at: String }
+struct BoardIssue { number: u64, title: String, url: String, status: String, state: String, updated_at: String }
 
 fn validate_board_snapshot(issues: Vec<BoardIssue>, expected: &Settings, current: &Settings, token: &str, current_token: Option<&str>) -> Result<Vec<BoardIssue>, String> {
     if !matches_connection_snapshot(expected, current, token, current_token) {
@@ -210,10 +210,11 @@ async fn fetch_pages(client: &reqwest::Client, endpoint: &str, repository_id: u6
         for issue in issues {
             if issue.pull_request.is_some() { continue; }
             if !seen_issues.insert(issue.number) { continue; }
+            if !matches!(issue.state.as_str(), "open" | "closed") { return Err("Issue の状態が無効です。".into()); }
             let parsed = reqwest::Url::parse(&issue.html_url).map_err(|_| "Issue の URL が無効です。")?;
             if parsed.scheme() != "https" || parsed.host_str() != Some("github.com") || parsed.port().is_some() || !parsed.username().is_empty() || parsed.password().is_some() { return Err("Issue の URL が許可されていません。".into()); }
             let status = classify_issue(&issue).to_owned();
-            result.push(BoardIssue { number: issue.number, title: issue.title, url: issue.html_url, status, updated_at: issue.updated_at });
+            result.push(BoardIssue { number: issue.number, title: issue.title, url: issue.html_url, status, state: issue.state, updated_at: issue.updated_at });
         }
         match next { Some(value) => url = value, None => break }
     }
@@ -502,17 +503,32 @@ mod tests {
         let closed: ApiIssue = serde_json::from_value(issue_json(2, "closed", &[], false)).unwrap();
         let open: ApiIssue = serde_json::from_value(issue_json(3, "open", &[], false)).unwrap();
         let closed_labeled: ApiIssue = serde_json::from_value(issue_json(4, "closed", &["status:todo"], false)).unwrap();
+        let closed_multiple: ApiIssue = serde_json::from_value(issue_json(5, "closed", &["status:todo", "status:in-progress", "status:done"], false)).unwrap();
         assert_eq!(classify_issue(&labeled), "todo");
         assert_eq!(classify_issue(&closed), "done");
         assert_eq!(classify_issue(&closed_labeled), "done");
+        assert_eq!(classify_issue(&closed_multiple), "done");
         assert_eq!(classify_issue(&open), "todo");
-        let page = serde_json::json!([issue_json(1, "open", &[], false),issue_json(2, "open", &[], true)]).to_string();
+        let page = serde_json::json!([issue_json(1, "open", &[], false), issue_json(2, "closed", &["status:todo"], false), issue_json(3, "open", &[], true)]).to_string();
         let (url, server) = mock_pages(vec![(200,page)]);
         let client = reqwest::Client::builder().no_proxy().build().unwrap();
         let result = tauri::async_runtime::block_on(fetch_pages(&client, &url, 42, "synthetic", &RateCooldown::default())).unwrap();
         server.join().unwrap();
-        assert_eq!(result.len(), 1);
+        assert_eq!(result.len(), 2);
         assert_eq!(result[0].number, 1);
+        assert_eq!(result[0].state, "open");
+        assert_eq!(result[1].state, "closed");
+        assert_eq!(result[1].status, "done");
+    }
+
+    #[test]
+    fn board_rejects_unknown_github_state() {
+        let page = serde_json::json!([issue_json(1, "unknown", &[], false)]).to_string();
+        let (url, server) = mock_pages(vec![(200, page)]);
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let result = tauri::async_runtime::block_on(fetch_pages(&client, &url, 42, "synthetic", &RateCooldown::default()));
+        server.join().unwrap();
+        assert!(matches!(result, Err(message) if message.contains("状態が無効")));
     }
 
     #[test]

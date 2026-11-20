@@ -1,0 +1,15 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.41s
+     Running unittests src\main.rs (target\debug\deps\github_issue_widget-fc25f1eb6ae85386.exe)
+
+running 2 tests
+test creation::tests::live_identity_failure_does_not_include_unexpected_title ... ok
+test creation::tests::live_identity_failures_do_not_include_unexpected_number_or_url ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 77 filtered out; finished in 0.00s
+
+     Running tests\opener_scope.rs (target\debug\deps\opener_scope-7d124b2b348401a4.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
