@@ -1,0 +1,24 @@
+{
+  "initial": {
+    "bounds": [
+      {
+        "width": 902,
+        "height": 522,
+        "originX": 1477,
+        "originY": 796
+      }
+    ],
+    "document": "●\nGitHub Issue Widget\nWORKSPACE\n最前面固定を解除\n−\n×\nYOUR ISSUES, AT A GLANCE\nGitHub Issue Widget\nIssue を確認するためのワークスペースです。接続設定とボード表示は今後の開発で追加されます。\n◇\n準備中\nGitHub との接続はまだ設定されていません。\nGitHub を開く ↗"
+  },
+  "afterPin": "●\nGitHub Issue Widget\nWORKSPACE\n最前面に固定\n−\n×\nYOUR ISSUES, AT A GLANCE\nGitHub Issue Widget\nIssue を確認するためのワークスペースです。接続設定とボード表示は今後の開発で追加されます。\n◇\n準備中\nGitHub との接続はまだ設定されていません。\nGitHub を開く ↗",
+  "opener": {
+    "windowTitle": "GitHub - Brave",
+    "address": "github.com",
+    "documentUrl": "https://github.com/"
+  },
+  "caveats": [
+    "screenshot metadata only",
+    "OS topmost and minimum size not independently measured",
+    "no drag or resize attempt"
+  ]
+}

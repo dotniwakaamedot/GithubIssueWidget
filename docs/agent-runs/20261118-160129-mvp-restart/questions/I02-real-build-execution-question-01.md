@@ -1,0 +1,7 @@
+# I02 実ビルド rustup stage のログ確認待ち 01
+
+- 担当 `/root/build_verification`、宛先 `/root`・`/root/restart_planner`。実行依頼 `tasks/I02/real-build-execution-request-01.md` SHA256 `B3C0C3A65BE8A3980F79A10D8676C1971B24F26869612EE9FA7E92580249B898`。開始前に固定参照9件・元とコピー各17件・7ツールの hash が一致し、scratch は通常ディレクトリ・owner を確認。対象出力・approval は未存在、同一 driver process 不在、D: 空き約126.2 GB・空きメモリ約39.2 GB・CPU観測18%。他環境との完全な排他は保証しない。
+- 承認版 `D:\Projects\GithubIssueWidget-build-20261119-02\build-driver-03.ps1` の `rustup` stage を同一専用 session `85009` で開始。PID 30792、開始 2026-11-18T20:47:10.0706867Z。Process と stdout/stderr 読取完了後、20:47:19.6636496Z に非公開ログ確認待ちへ移行。実 exit code は `publish` と結果生成まで取得できておらず成功扱いしない。console に `VoidTaskResult` 2行と確認待ち表示が出たが、ログ本文は表示していない。
+- 保護 metadata `D:\Projects\GithubIssueWidget-build-20261119-02\rustup.log-review-needed.json` SHA256 `9F7954D45DCA84415B7DD62430F3B2D67D8BE63706ECE3E672E790401CE7B8C1`。stdout SHA256 `BBBB3EB31124866016C34BAFEF844DE0A7F20F5B1545B2B29102F90F5C565E08`、stderr SHA256 `B221EB4122453884168CD67BEB24241647E8B8653986BA3162D3163A1E53256C`。いずれも自動走査は `clear-patterns-only` であり、機密がない保証ではない。両ログは保護 ACL 領域の `.tmp` のまま。
+- 質問: 別担当による必要最小限の秘匿確認と、承認版・両 log hash に結び付く receipt `tasks/I02/real-build-rustup-log-approval-01.json` の確定を依頼したい。確認者は値・断片を会話や共有 run に出さない。親が receipt と対象セッションを確認し `publish` を指示するまで入力・次 stage を行わない。
+- 実行中のコマンド失敗なし。元製品・元 worktree・GitHub と他者プロセスを変更せず、画面・ブラウザ・port は未使用。今回のログは子 process の環境等を含む可能性があるため読取内容をここに記載しない。

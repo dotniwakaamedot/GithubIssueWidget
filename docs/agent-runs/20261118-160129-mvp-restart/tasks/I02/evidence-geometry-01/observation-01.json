@@ -1,0 +1,8 @@
+{
+  "source": "Manual transcription of cua.getApp accessibility text; no screenshot saved",
+  "windowId": 6166362,
+  "processId": 9796,
+  "exeSha256": "F10DC7E78705DC40927C95CBABC372FA5F64F1F2EE52B0B46A80E6BA56BCC2BD",
+  "eventRecord": "diagnostic-ready:[]",
+  "geometry": {"utcMs":1795028786593,"startMs":25511.100000023842,"endMs":25511.400000035763,"viewport":{"width":900,"height":520,"dpr":1,"scrollX":0,"scrollY":0},"header":{"left":0,"top":0,"right":900,"bottom":56},"marker":{"left":360,"top":16,"right":424,"bottom":40},"buttons":[{"left":737.09375,"top":10,"right":807.09375,"bottom":45},{"left":812.09375,"top":10,"right":845.046875,"bottom":45},{"left":850.046875,"top":10,"right":883,"bottom":45}],"resize":[{"left":7,"top":0,"right":893,"bottom":5},{"left":7,"top":515,"right":893,"bottom":520},{"left":895,"top":7,"right":900,"bottom":513},{"left":0,"top":7,"right":5,"bottom":513},{"left":891,"top":0,"right":900,"bottom":9},{"left":0,"top":0,"right":9,"bottom":9},{"left":891,"top":511,"right":900,"bottom":520},{"left":0,"top":511,"right":9,"bottom":520}],"markerInsideHeader":true,"markerAtCenter":true,"stableDuringSample":true,"minimumGapCssPx":11}
+}

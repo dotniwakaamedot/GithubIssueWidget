@@ -1,0 +1,11 @@
+﻿{
+  "lockfileVersion": 3,
+  "packageCount": 134,
+  "installScriptPackages": [
+    "node_modules/esbuild",
+    "node_modules/fsevents"
+  ],
+  "registryHosts": [
+    "registry.npmjs.org"
+  ]
+}

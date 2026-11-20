@@ -1,0 +1,6 @@
+# I02 所有セッションの終了信号範囲 未確認 02
+
+- 担当 `/root/drag_design`、宛先 `/root`・`/root/restart_planner`。対象 `questions/I02-geometry-execution-answer-01.md`。旧の2 session handle は直前 poll で live。read-only の `Get-CimInstance Win32_Process`（cwd `D:\Projects\GithubIssueWidget`、exit 0）により、app PID `21312` の parent は `powershell.exe` PID `40716`、app child は対象 WebView2。server PID `22956` は node、parent `cmd.exe` PID `17080`、child esbuild PID `55948`。各 PID の名前・親・作成時刻を観測し、旧 app exe の path と hash、および server command line の専用 scratch を質問01のとおり照合した。
+- 旧2 command は `exec_command` で `tty` を指定せずに開始しており、session の stdin に文字 `0x03` を書く操作が Windows 上の console control signal としてそれぞれの子プロセスに送られるか、影響する process group の範囲と安全な終了を確認できていない。プロセス親子関係だけでは process group の所属を証明しない。対象 app は GUI プロセスであり、コンソール信号への反応も未確認。
+- 「対象と process group が担当所有の対象だけと確認できた場合」の条件を満たせず、いずれの handle にも Ctrl+C を送っていない。`CloseMainWindow` も、コンソール信号を受けられないと確認したわけではなく、また同一ターンでの Computer Use と別の UI 操作手段の混用に関する適用制約があるため未実施。対象や desktop の操作状態を推測しない。プロセス起動・停止・強制終了・UI 入力は実施していない。
+- 質問: 専用 handle に対する signal と process group の安全な同定方法を客観的に確認するか、他の指示と衝突しない穏当な終了手順を管理が明示してほしい。確認できない場合は旧版を保持し、新版の build/起動と port 1435 の利用を保留する。前回の画像不一致1回、browser inventory failure2回を維持。今回新たな失敗なし。同種問題2回で客観調査、3回で全中止。

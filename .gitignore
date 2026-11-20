@@ -1,0 +1,6 @@
+/docs/agent-runs/**/target/
+/docs/agent-runs/**/node_modules/
+/docs/agent-runs/**/dist/
+/docs/agent-runs/**/gen/
+/docs/agent-runs/**/scope_check.exe
+/docs/agent-runs/**/scope_check.pdb

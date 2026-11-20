@@ -1,0 +1,23 @@
+﻿
+> github-issue-widget@0.1.0 tauri
+> tauri dev
+
+npm.cmd :      Running BeforeDevCommand (`npm run dev`)
+発生場所 行:2 文字:492
++ ... [1],$Matches[2],'Process')}}; & npm.cmd run tauri -- dev 2>&1 | Out-F ...
++                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (     Running Be...(`npm run dev`):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> github-issue-widget@0.1.0 dev
+> vite --host 127.0.0.1 --strictPort
+
+
+  VITE v7.3.8  ready in 416 ms
+
+  ➜  Local:   http://127.0.0.1:1420/
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching D:\Projects\GithubIssueWidget-issue-2-20261118-160129\widget\src-tauri for changes...
+[1m[32m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 0.63s
+[1m[32m     Running[0m `target\debug\github-issue-widget.exe`

@@ -1,0 +1,15 @@
+{
+    "executable":  "C:\\Users\\semis\\.cargo\\bin\\rustup.exe",
+    "args":  [
+                 "toolchain",
+                 "install",
+                 "1.90.0",
+                 "--profile",
+                 "minimal",
+                 "--no-self-update"
+             ],
+    "cwd":  "D:\\Projects\\GithubIssueWidget-build-20261118-160129",
+    "startedUtc":  "2026-11-18T17:52:50.8597374Z",
+    "finishedUtc":  "2026-11-18T17:53:00.9395350Z",
+    "exitCode":  0
+}

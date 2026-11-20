@@ -1,0 +1,21 @@
+# I02 検証方法設計の独立レビュー依頼 02
+
+- run / task / request: 20261118-160129-mvp-restart / I02-verification-design-review / 02。担当 `/root/plan_review`、verification_reviewer。設計作者 `/root/verification_design` とは別担当。前回の設計レビューから2回目。実際の担当 ID は起動前に確認する。
+- ユーザー原文: 「Issueを確認し、プロジェクトを進行してください。あなたはオーケストレーションに徹してください。同じ間違いや失敗を２度繰り返したら中止してください。」追加指示「失敗を3回繰り返すまでに緩和します」「2回同じ問題にあったら別のエージェントに客観的に調査してもらってください」。今回初回を含む同種2回で該当操作を中断し別担当へ独立調査、同種3回で全作業を中止し親に報告する。適用する Issue 運用上、同じ意味のレビュー指摘が2回出た場合も停止する。
+- 共有 run: D:\Projects\GithubIssueWidget\docs\agent-runs\20261118-160129-mvp-restart。対象 worktree: D:\Projects\GithubIssueWidget-issue-2-20261118-160129、branch `task/issue-2-foundation-20261118-160129`。前版結果の製品17ファイルを対象とし、基点・相対パス・注記を区別して全件存在を確認後に SHA256・未追跡を含む状態を照合。変更・不明なら停止。
+- 入力の確定ファイルと実体から計算した SHA256:
+- tasks/I02/verification-design-request-03.md SHA256 7CB095F5217F840136A668AE9F8726457259DEEC40D3A26F2FAB06719C38D6AE
+- tasks/I02/verification-design-result-02.md SHA256 971D1BE06A8D735AB75C57B5398F2E667D0F288D991B34F473D15080140A2926
+- tasks/I02/verification-design-result-01.md SHA256 E821627AF74FF335D29433BF47F8682D36C2BF970B18036365495769F0153B4D
+- tasks/I02/verification-design-review-01.md SHA256 829758054D5DF5B0D8D920CF56F46D8EE58725D07200B95C269CABE486A6D6EE
+- tasks/I02/combined-review-01.md SHA256 F6DF723A067C988F144087B6A4833EDD306AAB56071068894424D359F70004D3
+- tasks/I02/result-02.md SHA256 520044FE6138609B99595C5FAF1D3973DD2D62EB82F27FE90392568C9599ED13
+- tasks/I02/management-04.md SHA256 0D569B792156CE706ACF0BF58295EBBFEE10D7FFE66434D09E36975B419F0239
+- plan-02.md SHA256 A6CB37DC369D69B334564235CD00C3AF284250109D4A56BE63C6CC7B104FE990
+- 作者の修正版が前版の依頼・レビュー・結果の SHA を引用していること、作者 ID、レビュアー ID は管理が照合済み。レビュー対象の実体 SHA を前後に確認し、変更後に旧版承認を使用しない。
+- 前版レビューの設計 B01 は、Cargo target だけの分離では Vite の dist など既存生成物を保護できない blocking 指摘。修正版が書込み先全体、専用コピー・依存・一時物・ログ・Tauri 生成・host への影響を整理し、既存保護物を上書きせず、元17ファイルとコピー・依存・実行バイナリの対応関係、実行環境差、証跡・所有と未確認を検証可能に設計しているか独立に確認する。元版・生成 exe とコピー版の関係を過大評価しない。
+- B02 の Windows OS 最前面・DPI・枠・寸法・中央・最小制約・各方向リサイズ、B03 の対象版・終了コード・dev / build、B04 の実 Tauri IPC ACL・既定ブラウザと拒否、B01 移動の未達、失敗時停止・安全条件・並行と直列化が前版から欠落・緩和していないか確認する。専用 VM や offline 依存・書込み監視・制限アカウントの実際の利用可能性は未確認として扱う。
+- これまで非実在パス参照3件で停止し、今回の再開後は別の基点取違えを1回報告済み。同種2回目は該当操作を中断し別担当へ独立調査、同種3回目は全停止。パスを推測せず存在確認し、複数基点一覧は基点・相対パス・SHA・注記を分ける。過去の移動不成功2回と文字破損2回の経路は再試行しない。
+- 実際のデスクトップ・入力操作、ドラッグ、対象アプリ起動、build、通信を伴う試験、製品・既存証拠・Git・GitHub の変更は禁止。静的読取と公式一次資料の調査に限定。安全性・権限が不明な操作は行わない。
+- 所有範囲: 共有 run の `tasks/I02/verification-design-review-02.md` と必要な自担当の新規質問のみ。親ディレクトリと宛先・tmp 不在を確認し UTF-8 往復と代表文字を確認して確定。書込み失敗時は依存操作を中断。
+- 結果: 対象版・実測 SHA・作者・読取元・cwd・コマンド・終了コード、前版 B01 の是正判定、同一指摘再発の有無、要求ごとの判断、blocking / non-blocking と根拠・是正条件、未確認、対象版限定の承認可否を記録。実行の許可や製品完成を意味しない。確定パスだけを通知。

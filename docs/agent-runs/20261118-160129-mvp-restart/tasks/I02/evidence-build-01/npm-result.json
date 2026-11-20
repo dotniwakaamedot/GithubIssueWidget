@@ -1,0 +1,13 @@
+{
+    "executable":  "C:\\Program Files\\nodejs\\npm.cmd",
+    "args":  [
+                 "ci",
+                 "--registry=https://registry.npmjs.org/",
+                 "--no-audit",
+                 "--no-fund"
+             ],
+    "cwd":  "D:\\Projects\\GithubIssueWidget-build-20261118-160129\\source\\widget",
+    "startedUtc":  "2026-11-18T17:53:34.0323984Z",
+    "finishedUtc":  "2026-11-18T17:53:38.0855526Z",
+    "exitCode":  0
+}

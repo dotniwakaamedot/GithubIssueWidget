@@ -1,0 +1,9 @@
+﻿https://github.com/ expected=true actual=true
+https://github.com/owner/repo/issues/1 expected=true actual=true
+https://github.com.evil.example/ expected=false actual=false
+https://github.com@evil.example/ expected=false actual=false
+https://evil.example/github.com/ expected=false actual=false
+http://github.com/ expected=false actual=false
+javascript:alert(1) expected=false actual=false
+file:///C:/example.txt expected=false actual=false
+https://sub.github.com/ expected=false actual=false

@@ -1,0 +1,3 @@
+# 基盤ウィンドウ初期観測の独立照合依頼
+
+担当 `/root/window_observation_review`。共有 run `D:/Projects/GithubIssueWidget/docs/agent-runs/20261118-160129-mvp-restart` の `tasks/I02/window-observation-result-20261119.md` SHA256 `344BF397673E25F070362A4F4BC98485BE43A76AD7DA5E974C49ADAC61AECD86` と `tasks/I02/window-observation-20261119.ps1` SHA256 `50E63F9B26ED38EE72FCE39CAB9526946854C02019D6A6E40B5747DF9CFF6DBD` を固定対象とする。Issue #2 の完了条件と照合し、数値の解釈・証拠の限界・未達を独立に確認する。対象 exe hash は結果に記載、実際の観測コマンド出力は会話であり生ログは残っていない。製品実行・UI 操作・プロセス操作・GitHub 変更は禁止。結果は `tasks/I02/window-observation-review-20261119.md` に UTF-8 一時ファイル経由で確定し、SHA256 を通知する。他者の成果を保護する。

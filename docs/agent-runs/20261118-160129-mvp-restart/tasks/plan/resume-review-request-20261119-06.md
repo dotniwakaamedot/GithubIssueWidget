@@ -1,0 +1,3 @@
+# 再開計画 revision 06 の独立レビュー依頼
+
+担当 `/root/resume_plan_review`。対象 `D:/Projects/GithubIssueWidget/docs/agent-runs/20261118-160129-mvp-restart/plan-resume-20261119-06.md` SHA256 `34107C02EC836567E4C5A918FF576037609000A0633198E21FB01DCABE2D2FD8`。revision 05 から、#6 の作業基準を対象版レビュー済みだが実機未確認の #5 暫定 commit とし、#2〜#5 の変更後に後続を再検証すること、ユーザー指定テスト先の書込み範囲を更新した。#5 の変更版レビュー `tasks/issue-05-review-20261119-03.md`、ユーザー指定テスト先 `tasks/test-repository-20261119.md`、Issue #6 を参照し、依存変更と未検証・所有・着手条件・実データ保護を照合する。製品・GitHub・UI・既存証拠は変更せず、`tasks/plan/resume-review-20261119-06.md` に UTF-8 一時ファイル経由で結果を確定する。必要なパスは依頼の正確な記載を使用し実在確認してから読む。PathNotFound は独立調査後1回発生済みで、もう1回発生したらユーザー指定により全停止する。

@@ -1,0 +1,109 @@
+{
+    "utc":  "2026-11-18T17:51:10.5386722Z",
+    "source":  "D:\\Projects\\GithubIssueWidget-issue-2-20261118-160129",
+    "destination":  "D:\\Projects\\GithubIssueWidget-build-20261118-160129\\source",
+    "files":  [
+                  {
+                      "relative":  "README.md",
+                      "sourceHash":  "50BA7D33CBC285E07F54D7025C1BACFFE1CFD16A3118334A3C4BD28942BC3F43",
+                      "copyHash":  "50BA7D33CBC285E07F54D7025C1BACFFE1CFD16A3118334A3C4BD28942BC3F43",
+                      "bytes":  2389
+                  },
+                  {
+                      "relative":  "widget/.gitignore",
+                      "sourceHash":  "768CBE8EEFE3381633E8698AD64F3C90DF67BDF9DABDAE238F5BE68E8BD3C640",
+                      "copyHash":  "768CBE8EEFE3381633E8698AD64F3C90DF67BDF9DABDAE238F5BE68E8BD3C640",
+                      "bytes":  53
+                  },
+                  {
+                      "relative":  "widget/index.html",
+                      "sourceHash":  "865DE72E838AB7726882C0F16CE24013D7809C51DB4656B686401972323B41EE",
+                      "copyHash":  "865DE72E838AB7726882C0F16CE24013D7809C51DB4656B686401972323B41EE",
+                      "bytes":  265
+                  },
+                  {
+                      "relative":  "widget/package-lock.json",
+                      "sourceHash":  "E300C165CA2F81735D2073B19FB1ADC886EAB484F5D837D968C726AFB2EF3B38",
+                      "copyHash":  "E300C165CA2F81735D2073B19FB1ADC886EAB484F5D837D968C726AFB2EF3B38",
+                      "bytes":  69846
+                  },
+                  {
+                      "relative":  "widget/package.json",
+                      "sourceHash":  "38F2D50EFDE435E345D5D60C44E8846AC6F250276B30A347EC0A263EF55E11EF",
+                      "copyHash":  "38F2D50EFDE435E345D5D60C44E8846AC6F250276B30A347EC0A263EF55E11EF",
+                      "bytes":  593
+                  },
+                  {
+                      "relative":  "widget/rust-toolchain.toml",
+                      "sourceHash":  "9CBDE07377ABDCE69BC9580ADB0315D52E2A09D6494A2005550A7E6733D9688B",
+                      "copyHash":  "9CBDE07377ABDCE69BC9580ADB0315D52E2A09D6494A2005550A7E6733D9688B",
+                      "bytes":  51
+                  },
+                  {
+                      "relative":  "widget/src-tauri/Cargo.lock",
+                      "sourceHash":  "B12DDABB69A903D065664324F8400FEF88E641803759D378CF6BB23B06C7BF3B",
+                      "copyHash":  "B12DDABB69A903D065664324F8400FEF88E641803759D378CF6BB23B06C7BF3B",
+                      "bytes":  121556
+                  },
+                  {
+                      "relative":  "widget/src-tauri/Cargo.toml",
+                      "sourceHash":  "8380153DCA2188496950E96882FFFFB0C42B70A657980343C67585F691279038",
+                      "copyHash":  "8380153DCA2188496950E96882FFFFB0C42B70A657980343C67585F691279038",
+                      "bytes":  337
+                  },
+                  {
+                      "relative":  "widget/src-tauri/build.rs",
+                      "sourceHash":  "8AF41C0062014FC594E4BB9899E60EE9930AB57D4CF0C73041FF557D6EC736E6",
+                      "copyHash":  "8AF41C0062014FC594E4BB9899E60EE9930AB57D4CF0C73041FF557D6EC736E6",
+                      "bytes":  35
+                  },
+                  {
+                      "relative":  "widget/src-tauri/capabilities/default.json",
+                      "sourceHash":  "EE3B901B492DF38B46A5D7E7DEC5C7B1707472DFDE0AE8ECF08C6BEC529A0AA1",
+                      "copyHash":  "EE3B901B492DF38B46A5D7E7DEC5C7B1707472DFDE0AE8ECF08C6BEC529A0AA1",
+                      "bytes":  577
+                  },
+                  {
+                      "relative":  "widget/src-tauri/icons/icon.ico",
+                      "sourceHash":  "8873FAA6A22A407B470B9536F03D87E0A092F0ED3FDEF13FA3DFE5F1F70B44FD",
+                      "copyHash":  "8873FAA6A22A407B470B9536F03D87E0A092F0ED3FDEF13FA3DFE5F1F70B44FD",
+                      "bytes":  4872
+                  },
+                  {
+                      "relative":  "widget/src-tauri/src/main.rs",
+                      "sourceHash":  "D6CB80A41F03AF392AC6F34430FE5F27AF3ED16397828908BB4152D992197243",
+                      "copyHash":  "D6CB80A41F03AF392AC6F34430FE5F27AF3ED16397828908BB4152D992197243",
+                      "bytes":  239
+                  },
+                  {
+                      "relative":  "widget/src-tauri/tauri.conf.json",
+                      "sourceHash":  "3F736678BC54BFD18A13669721D150F39ADD16978B5CBD5E10B26EB407457DC6",
+                      "copyHash":  "3F736678BC54BFD18A13669721D150F39ADD16978B5CBD5E10B26EB407457DC6",
+                      "bytes":  811
+                  },
+                  {
+                      "relative":  "widget/src/main.tsx",
+                      "sourceHash":  "07318B40089C01EEB897EFDB5A933DD15982C51E51CDAEABC097AC219C867AFE",
+                      "copyHash":  "07318B40089C01EEB897EFDB5A933DD15982C51E51CDAEABC097AC219C867AFE",
+                      "bytes":  2565
+                  },
+                  {
+                      "relative":  "widget/src/style.css",
+                      "sourceHash":  "335DAC73CE72A8D2B0F57E10D87903B0F5ECC09B35FB8CE75746643EA31BE024",
+                      "copyHash":  "335DAC73CE72A8D2B0F57E10D87903B0F5ECC09B35FB8CE75746643EA31BE024",
+                      "bytes":  2087
+                  },
+                  {
+                      "relative":  "widget/tsconfig.json",
+                      "sourceHash":  "E31CD39572A32CC34B7E3DF7EE0E97992241CA17C9E135325359219674ABB660",
+                      "copyHash":  "E31CD39572A32CC34B7E3DF7EE0E97992241CA17C9E135325359219674ABB660",
+                      "bytes":  402
+                  },
+                  {
+                      "relative":  "widget/vite.config.ts",
+                      "sourceHash":  "3CF43B5EFBCB9255F4867F2F89CDDEFB2FD901F9788227B12745D5588A5EBE81",
+                      "copyHash":  "3CF43B5EFBCB9255F4867F2F89CDDEFB2FD901F9788227B12745D5588A5EBE81",
+                      "bytes":  280
+                  }
+              ]
+}

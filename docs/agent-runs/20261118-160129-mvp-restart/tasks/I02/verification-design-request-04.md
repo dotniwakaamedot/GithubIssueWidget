@@ -1,0 +1,23 @@
+# I02 実環境を踏まえた専用コピー検証方式の設計依頼 04
+
+- run / task / request: 20261118-160129-mvp-restart / I02-verification-design / 04。担当 `/root/verification_design`。管理 `/root/restart_planner`、環境調査作者 `/root/isolation_inventory`、前版確認 `/root/plan_review`。旧担当の書込み停止と実際の担当 ID 一致を開始前に確認。
+- ユーザー原文: 「Issueを確認し、プロジェクトを進行してください。あなたはオーケストレーションに徹してください。同じ間違いや失敗を２度繰り返したら中止してください。」追加指示「失敗を3回繰り返すまでに緩和します」「2回同じ問題にあったら別のエージェントに客観的に調査してもらってください」。今回初回を含む同種2回で該当操作を中断し別担当へ独立調査、同種3回で全作業を中止し親へ報告。
+- 共有 run: D:\Projects\GithubIssueWidget\docs\agent-runs\20261118-160129-mvp-restart。対象 worktree: D:\Projects\GithubIssueWidget-issue-2-20261118-160129、branch `task/issue-2-foundation-20261118-160129`。結果記載の未コミット17ファイル、ignored 生成物、証跡と他担当作業を保護。対象版変更・所有不明・競合があれば停止。
+- 読取専用の確定参照と実体から計算した SHA256:
+- tasks/I02/isolation-inventory-result-01.md SHA256 D73C3CE1114775361C4BF045E774F6F352C2F86796073DBD5842B6EE92D90555
+- tasks/I02/isolation-inventory-request-01.md SHA256 9B5488B61AA87F3B13573FEFF3F07C7071C99F9CB39B6F25827639E629AF6297
+- tasks/I02/verification-design-result-02.md SHA256 971D1BE06A8D735AB75C57B5398F2E667D0F288D991B34F473D15080140A2926
+- tasks/I02/verification-design-review-02.md SHA256 0BF94DA7F7FF203326DA5E7133EADADE6A48E6BE1ADA4CCC5DF9F2BF67869FA5
+- tasks/I02/combined-review-01.md SHA256 F6DF723A067C988F144087B6A4833EDD306AAB56071068894424D359F70004D3
+- tasks/I02/result-02.md SHA256 520044FE6138609B99595C5FAF1D3973DD2D62EB82F27FE90392568C9599ED13
+- tasks/I02/management-04.md SHA256 0D569B792156CE706ACF0BF58295EBBFEE10D7FFE66434D09E36975B419F0239
+- plan-02.md SHA256 A6CB37DC369D69B334564235CD00C3AF284250109D4A56BE63C6CC7B104FE990
+- 環境調査では Windows 11 Home・ツール・既存依存を検出したが、専用 Windows VM の実在・利用権、Windows の対話実機としての可否は未確認。VM 案は対象版の独立レビューで承認された設計であり、利用可能性の実証ではない。
+- 目的: VM を当然の必須条件とせず、現在の Windows 環境で Issue #2 の B02〜B04 を検証するため、**新規専用ディレクトリのソース実体コピー**と環境変数・書込み先の分離を用いた代替方式を設計する。元 worktree の未コミット17ファイル・ignored 生成物、共有 run、他者の資産・秘密を保護し、対象版と証拠を対応付ける。新案は自動承認された代替ではなく独立レビューを受ける。
+- dist / Cargo target / Tauri gen / node_modules / npm・Cargo・Rustup cache / TEMP・TMP / ツールと子プロセスの書込み先、APPDATA / LOCALAPPDATA、registry、Credential Manager、WebView2・既定ブラウザ・profile、ポート・ネットワーク・UI を区別。コピーのパス解決・リンク回避、既存資産への衝突防止、ログ・生成物の所有／保持／復元、秘密保護、元版・コピーの hash、依存と環境差、終了コードと証拠固定を具体化。
+- OS 全体の完全隔離を前提とせず、通常 build や Windows 利用による許容可能な副作用、ユーザー資産・秘密保護の必須条件、未確認の書込みと残るリスクを区別。重要な前提を確認できない場合は検証を中止または未実施とし、必要な権限、対話環境、監視、復旧を具体化。
+- B02 の OS 最前面・寸法・中央・最小制約・安全なリサイズ、B03 の対象版・exit code と build/dev、B04 の実 IPC ACL の許可・拒否と既定ブラウザについて、元 Issue 条件との対応、作業の所有と排他・並行可否、独立レビュー・証拠を示す。B01 のドラッグ原因は未確定であり同じ移動試行をせず未完了とする。実担当 ID は管理が後で確定する。
+- 前回の非実在パス3件による停止と今回の基点取違え1件は記録済み。さらに本依頼の最初の準備時、管理側の検査に対する調査担当 ID の本文記載漏れが確定前に1回検出された。今回は参照・担当の整合に関わる失敗1件と扱う。パス・CLI を推測せず存在を確認し、基点・相対パス・64桁 SHA・注記を分離する。同種2回で該当操作を停止し独立調査、3回で全停止。過去の文字破損経路とドラッグは再試行しない。
+- 本担当は設計のみ。build、アプリ起動、OS・UI 入力、通信を伴う試験、製品・既存生成物・Git・GitHub の変更は禁止。公式一次資料の読取以外に外部副作用を発生させず、安全・権限不明は未確認として記録。
+- 所有範囲: 共有 run の `tasks/I02/verification-design-result-03.md` と自担当の新規質問のみ。親ディレクトリ・宛先・tmp 不在を確認し、UTF-8 往復と代表文字を読戻して確定。書込み失敗時は依存操作を中断。
+- 成果: 対象版・元 Issue と参照、代替設計の操作・所有・検証・許容副作用・リスク・未確認、前版との差、実施順と並行可否、cwd・読取コマンド・終了コードを記録。独立レビューと管理判断まで実行指示とせず、確定パスのみ通知する。
