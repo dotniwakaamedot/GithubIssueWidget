@@ -51,7 +51,7 @@ def parse_response(raw, page):
     links = []
     for line in lines[1:]:
         name, colon, value = line.partition(":")
-        if not colon:
+        if not colon or not re.fullmatch(r"[!#$%&'*+.^_`|~0-9A-Za-z-]+", name):
             raise ValueError("invalid header")
         if name.lower() == "link":
             links.extend(value.strip().split(","))
@@ -60,7 +60,13 @@ def parse_response(raw, page):
         match = re.fullmatch(r'\s*<([^<>]+)>\s*;\s*rel="([^"]+)"\s*', link)
         if not match:
             raise ValueError("invalid link")
-        if match.group(2) != "next":
+        relations = match.group(2).split()
+        if not relations or any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9.-]*", relation) for relation in relations):
+            raise ValueError("invalid link relation")
+        relations = [relation.lower() for relation in relations]
+        if relations.count("next") > 1:
+            raise ValueError("duplicate next")
+        if "next" not in relations:
             continue
         if next_page is not None:
             raise ValueError("duplicate next")

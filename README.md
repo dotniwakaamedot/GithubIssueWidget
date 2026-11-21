@@ -33,17 +33,19 @@ npm.cmd run tauri -- dev
 npm.cmd run tauri -- build --no-bundle
 ```
 
-実行ファイルは `widget/src-tauri/target/release/` に出力されます。初期状態は最前面、枠なし・ダークテーマです。タイトルバーの固定ボタンで最前面を切り替え、タイトル部のドラッグで移動し、外周のドラッグでサイズを変更します。外部リンクは `https://github.com/` とその配下に限定し、GitHub Enterprise 等の別ホストは対象外です。
+実行ファイルは `widget/src-tauri/target/release/github-issue-widget.exe` に出力されます。ビルド後、このファイルを起動して使用できます。初期状態は最前面、枠なし・ダークテーマです。タイトルバーの固定ボタンで最前面を切り替え、タイトル部のドラッグで移動し、外周のドラッグでサイズを変更します。外部リンクは `https://github.com/` とその配下に限定し、GitHub Enterprise 等の別ホストは対象外です。
 
 ## 接続と使い方
 
-GitHub の Fine-grained personal access token は対象リポジトリだけを選び、`Metadata: Read` と `Issues: Read and write` を付与します。設定画面にオーナー名、リポジトリ名、トークンを入力し、接続確認に成功すると保存されます。接続確認は Issue の書き込み権限を保証しないため、作成や移動で権限エラーが出る場合は GitHub 側の設定も確認してください。
+GitHub の Fine-grained personal access token は対象リポジトリだけを選び、`Metadata: Read` と `Issues: Read and write` を付与します。必要な期間に合った有効期限を設定し、期限切れになったら新しいトークンを設定してください。トークンの値はアプリの設定画面に直接入力し、チャットや Issue、ソースコードなどで共有しないでください。設定画面にオーナー名、リポジトリ名、トークンを入力し、接続確認に成功すると保存されます。接続確認は Issue の書き込み権限を保証しないため、作成や移動で権限エラーが出る場合は GitHub 側の設定も確認してください。
 
 接続先は `%APPDATA%/github-task-widget/settings.json` に保存し、トークンは Windows Credential Manager に保存します。保存済みトークンは画面へ読み戻しません。既存トークンを使う場合は入力欄を空のまま接続でき、設定画面からトークンを更新・削除できます。
 
 同じ設定領域を共有する別ウィンドウで接続先や資格情報が変更された場合、古い画面からの一覧取得・作成・移動や、設定の保存・トークン削除は中止されます。エラーが表示されたら設定を再読み込みし、対象を確認してから操作してください。アプリを介さず資格情報を直接変更する操作との完全な排他は保証されません。
 
 ボードは約60秒ごとに同期します。`status:todo`、`status:in-progress`、`status:done` ラベルを事前に GitHub 上で作成してください。存在しないラベルをアプリが自動作成することはありません。Issue 作成が途中で失敗したり結果が不明になった場合は、表示された結果と GitHub の状態を確認してから確認操作を行い、重複作成を避けてください。
+
+カードをクリックすると GitHub で Issue を開きます。新しい Issue は上部の「Issue を作成」または各列の「＋」から作成できます。状態を変更するには、カードを移動先の列へドラッグ＆ドロップします。Done に移すと Issue は Closed、Todo または In Progress に移すと Open になります。
 
 Closed の Issue はステータスラベルにかかわらず Done に表示します。Open の Issue はステータスラベルを Todo、In Progress、Done の順に優先し、該当ラベルがなければ Todo に表示します。ラベルと Open / Closed が一致しない場合は、GitHub 上の状態を確認してください。
 

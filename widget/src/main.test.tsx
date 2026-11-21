@@ -86,6 +86,30 @@ describe("moving issues", () => {
     expect(mocks.invoke).toHaveBeenCalledWith("move_issue", { expectedOwner: "a", expectedRepo: "b", expectedRevision: "revision-1", number: 42, expectedUpdatedAt: "v1", status: target });
   });
 
+  it("clears stale cards and shows both errors when refresh after an uncertain move fails", async () => {
+    let lists = 0;
+    const original = { number: 42, title: "move me", url: "https://github.com/a/b/issues/42", status: "todo", state: "open", updated_at: "v1" };
+    mocks.invoke.mockImplementation((command: string) => {
+      if (command === "connection_info") return Promise.resolve({ owner: "a", repo: "b", has_token: true, revision: "revision-1" });
+      if (command === "pending_creation") return Promise.resolve(null);
+      if (command === "list_issues") return ++lists === 1 ? Promise.resolve([original]) : Promise.reject("一覧の再取得に失敗しました。");
+      if (command === "move_issue") return Promise.reject("更新結果は不明です。");
+      throw new Error("unexpected command");
+    });
+    render(<App />);
+    const card = await screen.findByText("move me");
+    const transfer = { effectAllowed: "", setData: vi.fn() };
+    fireEvent.dragStart(card.closest("button")!, { dataTransfer: transfer });
+    fireEvent.drop(screen.getByText("Done").closest("section")!, { dataTransfer: transfer });
+    await screen.findByText("一覧の再取得に失敗しました。");
+    expect(lists).toBe(2);
+    expect(mocks.invoke).toHaveBeenCalledWith("move_issue", { expectedOwner: "a", expectedRepo: "b", expectedRevision: "revision-1", number: 42, expectedUpdatedAt: "v1", status: "done" });
+    expect(screen.queryByText("move me")).toBeNull();
+    const alerts = screen.getAllByRole("alert").map(element => element.textContent);
+    expect(alerts).toContain("更新結果は不明です。");
+    expect(alerts).toContain("一覧の再取得に失敗しました。");
+  });
+
   it("refreshes after an uncertain move and keeps the error visible", async () => {
     let lists = 0;
     const original = { number: 42, title: "move me", url: "https://github.com/a/b/issues/42", status: "todo", state: "open", updated_at: "v1" };
@@ -360,6 +384,67 @@ describe("connection settings", () => {
     expect(mocks.invoke.mock.calls.filter(([command]) => command === "list_issues")).toHaveLength(2);
   });
 
+  it("ignores a late error from the previous connection", async () => {
+    let rejectOld!: (reason: string) => void;
+    const old = new Promise((_, reject) => { rejectOld = reject; });
+    let lists = 0;
+    mocks.invoke.mockImplementation((command: string) => {
+      if (command === "connection_info") return Promise.resolve({ owner: "old-owner", repo: "old-repo", has_token: true, revision: "revision-1" });
+      if (command === "pending_creation") return Promise.resolve(null);
+      if (command === "save_connection") return Promise.resolve({ owner: "new-owner", repo: "new-repo", has_token: true, revision: "revision-2" });
+      if (command === "list_issues") return ++lists === 1 ? old : Promise.resolve([{ number: 2, title: "new issue", url: "https://github.com/new-owner/new-repo/issues/2", status: "todo", state: "open", updated_at: "v1" }]);
+      throw new Error("unexpected command");
+    });
+    render(<App />);
+    await screen.findByText("old-owner / old-repo");
+    fireEvent.click(screen.getByText("設定"));
+    fireEvent.change(screen.getByLabelText("オーナー"), { target: { value: "new-owner" } });
+    fireEvent.change(screen.getByLabelText("リポジトリ"), { target: { value: "new-repo" } });
+    fireEvent.click(screen.getByText("接続を確認して保存"));
+    await screen.findByText("new issue");
+    await act(async () => { rejectOld("old error"); await old.catch(() => {}); });
+    expect(screen.queryByText("old error")).toBeNull();
+    expect(screen.getByText("new issue")).toBeTruthy();
+  });
+
+  it("measures sixty seconds from the start and explains the schedule", async () => {
+    vi.useFakeTimers();
+    let finish!: (value: unknown) => void;
+    const first = new Promise(resolve => { finish = resolve; });
+    let lists = 0;
+    mocks.invoke.mockImplementation((command: string) => command === "connection_info"
+      ? Promise.resolve({ owner: "test-owner", repo: "test-repo", has_token: true, revision: "revision-1" })
+      : command === "pending_creation" ? Promise.resolve(null) : ++lists === 1 ? first : Promise.resolve([]));
+    await act(async () => { render(<App />); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); finish([]); await first; });
+    expect(screen.getByText("通常は開始から60秒ごとに同期（長時間の場合は完了後）")).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(49_999); });
+    expect(lists).toBe(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(lists).toBe(2);
+  });
+
+  it.each([-3_600_000, 3_600_000])("ignores a wall clock change of %i ms during a request", async offset => {
+    vi.useFakeTimers();
+    let finish!: (value: unknown) => void;
+    const first = new Promise(resolve => { finish = resolve; });
+    let lists = 0;
+    mocks.invoke.mockImplementation((command: string) => command === "connection_info"
+      ? Promise.resolve({ owner: "test-owner", repo: "test-repo", has_token: true, revision: "revision-1" })
+      : command === "pending_creation" ? Promise.resolve(null) : ++lists === 1 ? first : Promise.resolve([]));
+    await act(async () => { render(<App />); });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+      vi.setSystemTime(Date.now() + offset);
+      finish([]);
+      await first;
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(49_999); });
+    expect(lists).toBe(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(lists).toBe(2);
+  });
+
   it("does not overlap refreshes when a request takes longer than sixty seconds", async () => {
     vi.useFakeTimers();
     let finish!: (value: unknown) => void;
@@ -371,8 +456,38 @@ describe("connection settings", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
     expect(mocks.invoke.mock.calls.filter(([command]) => command === "list_issues")).toHaveLength(1);
     await act(async () => { finish([]); await slow; });
-    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(mocks.invoke.mock.calls.filter(([command]) => command === "list_issues")).toHaveLength(2);
+  });
+
+  it("does not spin on fast failures and recovers on the next scheduled attempt", async () => {
+    vi.useFakeTimers();
+    let lists = 0;
+    mocks.invoke.mockImplementation((command: string) => command === "connection_info"
+      ? Promise.resolve({ owner: "test-owner", repo: "test-repo", has_token: true, revision: "revision-1" })
+      : command === "pending_creation" ? Promise.resolve(null) : ++lists === 1 ? Promise.reject("通信エラー") : Promise.resolve([{ number: 1, title: "recovered", url: "https://github.com/a/b/issues/1", status: "todo", state: "open", updated_at: "v1" }]));
+    await act(async () => { render(<App />); });
+    expect(screen.getByText("通信エラー")).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(59_999); });
+    expect(lists).toBe(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(lists).toBe(2);
+    expect(screen.queryByText("通信エラー")).toBeNull();
+    expect(screen.getByText("recovered")).toBeTruthy();
+  });
+
+  it("does not restart or render an outstanding request after unmount", async () => {
+    vi.useFakeTimers();
+    let finish!: (value: unknown) => void;
+    const slow = new Promise(resolve => { finish = resolve; });
+    mocks.invoke.mockImplementation((command: string) => command === "connection_info"
+      ? Promise.resolve({ owner: "test-owner", repo: "test-repo", has_token: true, revision: "revision-1" })
+      : command === "pending_creation" ? Promise.resolve(null) : slow);
+    let unmount!: () => void;
+    await act(async () => { ({ unmount } = render(<App />)); });
+    unmount();
+    await act(async () => { finish([]); await slow; await vi.advanceTimersByTimeAsync(120_000); });
+    expect(mocks.invoke.mock.calls.filter(([command]) => command === "list_issues")).toHaveLength(1);
   });
 
   it("clears the board when another instance changes the connection", async () => {
@@ -426,6 +541,48 @@ describe("connection settings", () => {
     expect(screen.getByRole("dialog").textContent).toContain("作成先: owner-b / repo-b");
     expect((screen.getByLabelText("タイトル") as HTMLInputElement).value).toBe("");
     expect((screen.getByLabelText("本文") as HTMLTextAreaElement).value).toBe("");
+  });
+
+  it("refreshes only when a rejected creation may have reached GitHub", async () => {
+    for (const mode of ["pending", "unreadable", "none"] as const) {
+      let submitted = false;
+      let lists = 0;
+      mocks.invoke.mockReset();
+      mocks.invoke.mockImplementation((command: string) => {
+        if (command === "connection_info") return Promise.resolve({ owner: "test-owner", repo: "test-repo", has_token: true, revision: "revision-1" });
+        if (command === "pending_creation") {
+          if (!submitted || mode === "none") return Promise.resolve(null);
+          if (mode === "unreadable") return Promise.reject("unavailable");
+          return Promise.resolve({ operation_id: "test-id", owner: "test-owner", repo: "test-repo", number: null, phase: "pending" });
+        }
+        if (command === "list_issues") {
+          lists++;
+          return Promise.resolve([{ number: 42, title: lists === 1 ? "old card" : "fresh card", url: "https://github.com/test-owner/test-repo/issues/42", status: "todo", state: "open", updated_at: "v1" }]);
+        }
+        if (command === "create_issue") { submitted = true; return Promise.reject("作成できませんでした。"); }
+        throw new Error("unexpected command");
+      });
+      render(<App />);
+      await screen.findByText("old card");
+      const createButton = screen.getByRole("button", { name: "Issue を作成" }) as HTMLButtonElement;
+      await waitFor(() => expect(createButton.disabled).toBe(false));
+      fireEvent.click(createButton);
+      fireEvent.change(screen.getByLabelText("タイトル"), { target: { value: "test title" } });
+      fireEvent.click(screen.getByRole("button", { name: "作成" }));
+      if (mode === "none") {
+        await screen.findByText("作成できませんでした。");
+        expect(screen.getByRole("dialog")).toBeTruthy();
+        expect(lists).toBe(1);
+      } else {
+        await screen.findByText("fresh card");
+        expect(screen.queryByText("old card")).toBeNull();
+        expect(screen.queryByRole("dialog")).toBeNull();
+        expect(lists).toBe(2);
+        expect((screen.getByRole("button", { name: "Issue を作成" }) as HTMLButtonElement).disabled).toBe(true);
+      }
+      expect(mocks.invoke.mock.calls.filter(([command]) => command === "create_issue")).toHaveLength(1);
+      cleanup();
+    }
   });
 
   it("shows an already created issue when closing a Done issue fails", async () => {

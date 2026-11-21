@@ -45,7 +45,7 @@ async fn move_in_repo(client: &reqwest::Client, repo_url: &str, token: &str, num
     let statuses: Vec<_> = updated.labels.iter().map(|label| label.name.as_str())
         .filter(|name| matches!(*name, "status:todo" | "status:in-progress" | "status:done")).collect();
     if updated.number != number || updated.pull_request.is_some() || updated.state != target_state || statuses != [target_label] {
-        return Err("更新後の状態またはラベルが一致しません。最新状態を確認してください。".into());
+        return Err("更新後の状態またはラベルが一致しません。更新の一部が反映された可能性があります。最新状態を確認してください。".into());
     }
     Ok(())
 }
@@ -315,6 +315,44 @@ mod tests {
         assert!(run(&url, "done").is_err());
         handle.join().unwrap();
         assert_eq!(requests.lock().unwrap().len(), 5);
+    }
+
+    // The final response models a concurrent change after our successful writes.
+    // The error must make it clear that our earlier writes may already be visible.
+    fn assert_post_write_conflict_reports_partial(final_issue: String) {
+        let (url, requests, handle) = server(vec![
+            (200, "{}".into()),
+            (200, issue("open", &["bug", "status:todo"], "v1")),
+            (200, "[{\"name\":\"bug\"},{\"name\":\"status:todo\"},{\"name\":\"status:done\"}]".into()),
+            (200, "[{\"name\":\"bug\"},{\"name\":\"status:done\"}]".into()),
+            (200, "{}".into()),
+            (200, final_issue),
+        ]);
+        let result = run(&url, "done");
+        handle.join().unwrap();
+        let requests = requests.lock().unwrap();
+        assert_eq!(requests.len(), 6);
+        assert!(requests[2].starts_with("POST /repos/a/b/issues/42/labels "));
+        assert!(requests[3].starts_with("DELETE /repos/a/b/issues/42/labels/"));
+        assert!(requests[4].starts_with("PATCH /repos/a/b/issues/42 "));
+        assert!(requests[5].starts_with("GET /repos/a/b/issues/42 "));
+        let error = result.expect_err("a final state conflict must not be successful");
+        assert!(error.contains("更新の一部が反映された可能性があります"), "the user must be warned that prior writes may have applied");
+    }
+
+    #[test]
+    fn post_write_competing_status_addition_reports_partial() {
+        assert_post_write_conflict_reports_partial(issue("closed", &["bug", "status:done", "status:in-progress"], "v2"));
+    }
+
+    #[test]
+    fn post_write_competing_target_removal_reports_partial() {
+        assert_post_write_conflict_reports_partial(issue("closed", &["bug"], "v2"));
+    }
+
+    #[test]
+    fn post_write_competing_state_change_reports_partial() {
+        assert_post_write_conflict_reports_partial(issue("open", &["bug", "status:done"], "v2"));
     }
 
     #[test]

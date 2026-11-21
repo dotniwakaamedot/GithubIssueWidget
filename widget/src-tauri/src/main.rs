@@ -111,9 +111,9 @@ fn link_has_next(params: &str) -> Result<bool, String> {
     if quoted || escaped { return Err("ページ情報が無効です。".into()); }
     parts.push(&params[start..]);
     for param in parts {
-        if let Some(value) = param.trim().strip_prefix("rel=") {
+        if let Some((_, value)) = param.trim().split_once('=').filter(|(name, _)| name.trim().eq_ignore_ascii_case("rel")) {
             let value = value.trim().trim_matches('"');
-            if value.split_ascii_whitespace().any(|relation| relation == "next") { found = true; }
+            if value.split_ascii_whitespace().any(|relation| relation.eq_ignore_ascii_case("next")) { found = true; }
         }
     }
     Ok(found)
@@ -1247,6 +1247,17 @@ mod tests {
     }
 
     #[test]
+    fn next_relation_is_case_insensitive() {
+        let endpoint = "https://api.github.com/repos/a/b/issues";
+        let mut headers = reqwest::header::HeaderMap::new();
+        for relation in ["REL=\"NEXT\"", "ReL=\"last NeXt\""] {
+            let link = format!("<https://api.github.com/repositories/42/issues?state=all&per_page=100&page=2>; {relation}");
+            headers.insert(reqwest::header::LINK, link.parse().unwrap());
+            assert!(next_page(&headers, endpoint, 42).unwrap().is_some());
+        }
+    }
+
+    #[test]
     fn secondary_limit_403_starts_cooldown_before_any_retry() {
         let body = serde_json::json!({"message": "You have exceeded a secondary rate limit"}).to_string();
         let (url, server) = mock_pages(vec![(403, body)]);
@@ -1636,3 +1647,7 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("failed to run widget");
 }
+
+#[cfg(test)]
+#[path = "pagination_tests.rs"]
+mod pagination_regression_tests;

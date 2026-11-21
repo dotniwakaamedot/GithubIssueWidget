@@ -105,6 +105,7 @@ export function App() {
     let active = true;
     let timer: number | undefined;
     const refresh = async () => {
+      const startedAt = performance.now();
       const version = ++requestVersion.current;
       setLoading(true);
       try {
@@ -113,7 +114,7 @@ export function App() {
       } catch (reason) {
         if (active && version === requestVersion.current) { setIssues([]); setBoardError(typeof reason === "string" ? reason : "Issue を取得できませんでした。"); }
       } finally {
-        if (active && version === requestVersion.current) { setLoading(false); timer = window.setTimeout(refresh, 60_000); }
+        if (active && version === requestVersion.current) { setLoading(false); timer = window.setTimeout(refresh, Math.max(0, 60_000 - (performance.now() - startedAt))); }
       }
     };
     void refresh();
@@ -192,7 +193,7 @@ export function App() {
     } catch (reason) {
       setCreateError(typeof reason === "string" ? reason : "Issue を作成できませんでした。");
       const current = await refreshPending();
-      if (current || current === undefined) setCreateOpen(false);
+      if (current || current === undefined) { setCreateOpen(false); setBoardEpoch(value => value + 1); }
     }
     finally { creatingRef.current = false; setCreating(false); }
   }
@@ -215,7 +216,7 @@ export function App() {
       <div className="settings-actions"><button type="submit" disabled={busy || !connection?.revision}>接続を確認して保存</button><button type="button" disabled={busy || !hasToken || !connection?.revision} onClick={removeToken}>保存済みトークンを削除</button>{connection?.has_token && connection.owner && connection.repo && <button type="button" disabled={busy} onClick={() => { connectionRequestVersion.current++; applyConnection(connection); setShowSettings(false); }}>ボードに戻る</button>}<button type="button" className="link" onClick={() => run(() => openUrl("https://github.com/"))}>GitHub を開く ↗</button></div>
     </form>
     {notice && <p role="status">{notice}</p>}{error && <p role="alert" className="error">{error}</p>}{pendingError && <p role="alert" className="error">{pendingError} <button type="button" onClick={() => void refreshPending()}>再読み込み</button></p>}{windowError && <p role="alert" className="error">{windowError}</p>}</section> : <section className="board-view">
-      <div className="board-heading"><div><strong>{connection?.owner} / {connection?.repo}</strong><small>{loading ? " 同期中…" : " 完了後60秒ごとに同期"}</small></div><button disabled={loading} onClick={() => setBoardEpoch(value => value + 1)}>更新</button></div>
+      <div className="board-heading"><div><strong>{connection?.owner} / {connection?.repo}</strong><small>{loading ? " 同期中…" : " 通常は開始から60秒ごとに同期（長時間の場合は完了後）"}</small></div><button disabled={loading} onClick={() => setBoardEpoch(value => value + 1)}>更新</button></div>
       {boardError && <p role="alert" className="error">{boardError}</p>}{moveError && <p role="alert" className="error">{moveError}</p>}{moving && <p role="status">Issue を移動しています…</p>}{windowError && <p role="alert" className="error">{windowError}</p>}{pendingError && <p role="alert" className="error">{pendingError} <button onClick={() => void refreshPending()}>再読み込み</button></p>}
       {localResult && <div role="status" className="creation-result"><strong>直前の作成結果</strong><span>{localResult.message}</span><span>{resultTarget?.owner} / {resultTarget?.repo}</span>{localUrl && <button className="link" onClick={() => run(() => openUrl(localUrl))}>{localResult.number ? `#${localResult.number} を GitHub で開く` : "GitHub で確認する ↗"}</button>}<button onClick={() => void acknowledgeLocalResult()}>直前の結果を確認しました</button></div>}
       {pending && <div role="status" className="creation-result"><strong>{localResult ? "別の確認待ち操作" : "作成結果"}</strong><span>{matchingResult?.message ?? (pending.phase === "completed" ? "前回の Issue は作成されました。" : "前回の Issue 作成結果を GitHub で確認してください。")}</span><span>{pending.owner} / {pending.repo}</span>{pendingUrl && <button className="link" onClick={() => run(() => openUrl(pendingUrl))}>{pendingNumber ? `#${pendingNumber} を GitHub で開く` : "GitHub で確認する ↗"}</button>}<button disabled={!pendingReady || acknowledging} onClick={() => void acknowledgePending()}>確認しました</button></div>}

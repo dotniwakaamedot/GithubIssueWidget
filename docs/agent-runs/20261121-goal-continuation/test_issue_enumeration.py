@@ -57,6 +57,23 @@ class EnumerationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.parse_response(b'HTTP/2.0 200 OK\nLink: invalid\n\n[]', 1)
 
+    def test_relation_lists_follow_next_and_reject_duplicates(self):
+        url = b'<https://api.github.com/repos/dotniwakaamedot/GithubIssueWidget/issues?state=all&per_page=100&page=2>'
+        for relations in (b'next last', b'last next'):
+            with self.subTest(relations=relations):
+                response = b'HTTP/2.0 200 OK\nLink: ' + url + b'; rel="' + relations + b'"\n\n[]'
+                self.assertEqual(module.parse_response(response, 1), ([], 2))
+        response = b'HTTP/2.0 200 OK\nLink: ' + url + b'; rel="last first"\n\n[]'
+        self.assertEqual(module.parse_response(response, 1), ([], None))
+        for links in (url + b'; rel="next next"', url + b'; rel="next", ' + url + b'; rel="last next"'):
+            with self.subTest(links=links), self.assertRaises(ValueError):
+                module.parse_response(b'HTTP/2.0 200 OK\nLink: ' + links + b'\n\n[]', 1)
+
+    def test_invalid_header_names_are_rejected(self):
+        for name in (b'Link ', b'', b'bad name', b'bad@name'):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                module.parse_response(b'HTTP/2.0 200 OK\n' + name + b': value\n\n[]', 1)
+
     def test_later_page_failure_is_not_success(self):
         def fetch(page):
             if page == 1:
