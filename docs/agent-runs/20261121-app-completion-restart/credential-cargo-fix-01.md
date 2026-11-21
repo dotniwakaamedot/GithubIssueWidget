@@ -1,0 +1,10 @@
+# 合成資格情報テストの依存解決と安全境界
+
+- 担当 `/root/credential_cargo_fix`。作業場所 `D:/Projects/GithubIssueWidget`。独立調査 `credential-cargo-investigation-01.md` と先行未完結果 `credential-live-test-design-01.md` を参照。所有領域は `credential-live-test-01/` と本結果に限る。
+- `cargo +1.90.0`、専用 `CARGO_HOME` の絶対パス、専用 target と `CARGO_NET_OFFLINE=true` を指定した `verify-03.py` で `cargo test --offline -- --test-threads=1` が終了 0、9 passed / 0 failed。既存の2つの終了101ログは変更していない。旧 Cargo 1.84.1 から1.90.0への変更と専用キャッシュ指定で今回解決したが、旧失敗の直接原因は確定していない。初回解決で新規 Cargo.lock を生成した。
+- `verify-04.py` で `cargo +1.90.0 build --locked --offline --features live` は終了 0。生成バイナリの無引数起動は `live credential access disabled` と表示し終了 2。実 Credential Manager・既存資格情報・実 PAT・GitHub は触れていない。
+- `src/main.rs` の `LIVE_APPROVED=false` による禁止時を非0終了に変更。実操作より前に journal の親ディレクトリを `CARGO_MANIFEST_DIR` の実体と照合し、専用 workspace 外を拒否する。journal 最終成分は既存の `create_new` で上書きしない。模擬テストは直下許可・外部・`..` を含む親の拒否を確認。Windows の junction 変更競合、ACL、親ディレクトリの耐久性、親子孫監督の安全性は未検証で、実 OS 試験を許可するものではない。
+- ハッシュ SHA256: `src/main.rs` `431258E8F0AEADB1646F45A2169994D02D8F2342E37CE90A2141114E2F7BF575`、`Cargo.toml` `38A06A4CCBAE1312682033DE8741DBFBB65C9BFAE40129F85B6C80A546583DA1`、新規 `Cargo.lock` `79B1644981C6B122726DDD3AC55E54616C815F9E56AF52ADE760C3B402D8EAA5`。
+- `verify-03.py` `1EB3EB7205FC439611FFFDA92C87809ED203B6C6D83564E95D418945959EC346`、`mock-test-03.log` `7D06AA940287B921B2906C6F573AD41BB373FB8ED5F339BAAA9CB155541741F2`、`mock-test-03.exit` `13BF7B3039C63BF5A50491FA3CFD8EB4E699D1BA1436315AEF9CBE5711530354`。
+- `verify-04.py` `DEE33CFE8BC075BA4A358F5FD718A7527375D77431A3BD449AEEB0693B9FC955`、`live-build-04.log` `F0B55FA85660EAB0E67A596A76CCE71DED1BE72A1CA4F68628799EC47731DD69`、`live-build-04.exit` `13BF7B3039C63BF5A50491FA3CFD8EB4E699D1BA1436315AEF9CBE5711530354`、`disabled-gate-04.log` `40D41E615B0DE8CF195842AF3FB5D04802E91DA6B014D9C25452A7BCC479B305`、`disabled-gate-04.exit` `DF4E26A04A444901B95AFEF44E4A96CFAE34690FFF2AD2C66389C70079CDFF2B`。
+- 本担当は製品・共有資料・資格情報・GitHub を変更せず、削除対象を指定しない。今回認識した新たな失敗なし。結果・入力・安全境界は別担当の独立レビューが必要。模擬試験や feature コンパイルは実 Credential Manager、実 WebView、実 PAT の検証ではない。先行2回の失敗記録への反映は親へ引き継ぐ。

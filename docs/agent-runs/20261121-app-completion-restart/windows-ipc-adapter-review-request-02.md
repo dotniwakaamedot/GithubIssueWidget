@@ -1,0 +1,6 @@
+# Windows IPC 隔離コピー安全境界の独立再レビュー依頼 02
+
+- 担当 `/root/windows_ipc_adapter_review`（レビュー01の担当を親が再開）。作者 `/root/windows_ipc_adapter` と別。共有 run `D:/Projects/GithubIssueWidget/docs/agent-runs/20261121-app-completion-restart/`、作業場所 `D:/Projects/GithubIssueWidget`、基準 HEAD `4961b25bec53a93439acdf5230de77f959908af0`。
+- 対象 `windows-ipc-adapter-fix-result-02.md` SHA256 `DA6C96F16A60DC7D433CD95E7AA39B210364A9833BF9266D7D0D79C75E61C1F2`、`windows-ipc-adapter-01/main.rs` `C160E15184C3651F3F17432DF9A5B14A40FEAB899EF8B6EADA7AACA48F7DC862`、`test_adapter.py` `8E9105F2D3B48B069F75DDFAA8636638297DEF2B5ED71DA97D6DAD97B7318F7F`、不変 `adapter.py` `0A350F40863D3E80FA621195EAB8143E404026C594BF802CB382971EA6F421B0`、レビュー01 `1A70B564FDE8C4353A8E2860174D78F0B209B3960937F11F26E2EABBCEC603E5`。実体・SHA を照合し相違時は停止・質問。
+- レビュー01の blocking「子テストが親ゲートを迂回」を直接確認し、親・子の独立起動と同コピー内 Credential Manager への入口、共通 fail-closed と試験ログ・コンパイル・終了記録を照合。特に `should_panic` の意味と各テストが実 API 前に禁止メッセージで停止した証拠、他の呼出し・別経路の範囲を調べる。Python 模型と Rust の接続、実 OS の所有権・排他・異常時停止、実 WebView・実 PAT は未証明として扱う。対象版の blocking と未確認を区別し、次の接続作業を開始できるか判断する。古い版の承認を流用せず、回数によって自動承認しない。
+- 読取りのみ。実 Credential Manager・資格情報・GitHub・製品・他担当の成果を操作しない。新規 `windows-ipc-adapter-review-02.md` のみ所有。他者変更を戻さず、対象・出力を絞り同種失敗２回は停止・報告。UTF-8 実データ読戻し後に一時ファイルから確定しパスのみ通知。

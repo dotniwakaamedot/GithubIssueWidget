@@ -1,0 +1,9 @@
+﻿# MVP release ビルド固定版
+
+担当 `/root/gui_failure_investigation`。`mvp-release-work-request-01.md`。現 checkout の製品・設定20ファイルを専用 `gui-release-build-01/mvp-input-01` にコピーし、前後の元・コピー SHA を照合。正本 manifest `mvp-input-manifest-01.json` SHA256 `673FDABA5A91336866FB4A8F073F773E071FF67146F2F04516CD9DD337B89024`。承認済み release build の専用 widget に5ファイルの更新を反映し、20ファイルと現製品の一致を確認した。旧テスト以外に含まれる `pagination_tests.rs` も固定。更新前に診断 main.rs/main.tsx と EXE を `mvp-backup-01` へ退避し、既存の通常 EXE backup・旧ログ/status とともに保護。`movement.rs`・以前の main.test.tsx も更新前を退避した。
+
+主要 SHA: `src/main.tsx` `6FCF2A34145450C5029B7FF80DDB3EC1DA5E27173AAB84E57F16D6D54C0E6A3E`、`src/main.test.tsx` `3123D7B77EA1E283082FDFF198BA882ACA1E0AAF216E9D7D567F20B55D615B63`、`src-tauri/src/main.rs` `AEFF1E65AD93EFA04773CEBBB9736A6BDC5B9938DB9FAF937DD88B3D9CBFE86F`、`src-tauri/src/movement.rs` `88BF21BB45C077DFDA592D906C753D168C5641E35EB12324D4ACF1652374695B`、`src-tauri/src/creation.rs` `61FB68E208B231664DB236E50A37BBB4870763AD61C0071383BACA5730982A87`。残りの設定・lock 等は manifest を参照する。診断版を product に含めない。
+
+候補コマンド `python docs/agent-runs/20261121-orchestration-continuation/gui-release-build-01/run_mvp_build.py`。runner SHA256 `E2F83ADFEEDEE21FE7E3889A81BBE8EC99A75ED8326B5D9F2753255BC4A263F7` は過去承認された `run_build.py` のログ/status 名をそれぞれ `mvp-build-output.log`・`mvp-build-status.txt` に変更したもの。`build.cmd` SHA `BAE3C381D954B2AB243708605D05B3113636B83FACAFC18D98BB58F46321F2EA` は既存方式、MSVC 後 `npm.cmd run tauri -- build --no-bundle`。offline・専用 Cargo/target/TEMP/APPDATA・最小環境、ログの保護と直接終了コード記録は既存の承認済み release と同じ。前回のcache/targetを再利用するため共有ツール・依存による通信/credential 非到達や子孫の無条件終了は保証しない。
+
+開始直前に manifest の現製品・専用コピー一致、追加/再解析点、backup SHA、ログ/status とユーザー配布先不存在を再確認。不一致時は停止。固定方式を別担当が確認し、管理の開始通知後1回だけビルド。成功後、EXE の SHA を取得し `widget/release-20261121/GitHubIssueWidget.exe` を新規作成（同名があれば中止）、コピー前後の SHA とユーザーの読取/実行アクセスを確認する。配布先の親と対象は再解析点を含めて確認する。成功を同一版で無理由に再実行しない。ログは保護ディレクトリ内に保存し本文を公開しない。実 GUI・credential・GitHub に触れない。UI の起動成功はこの build では証明できない。

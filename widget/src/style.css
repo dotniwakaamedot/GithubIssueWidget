@@ -18,3 +18,6 @@
   .settings-actions { gap: 8px; }
   .settings-actions button:not(.link) { padding: 5px 8px; }
 }
+
+/* Avoid dragging a text selection instead of a single issue card. */
+.board-column h2, .issue-card { user-select: none; }

@@ -17,6 +17,12 @@ Windows 11 向けアプリの開発版は `widget/` にあります。GitHub リ
 
 `skills/`、`.codex/agents/`、`adapters/`、`tests/` は移入した AI ワークフローの素材とテストです。Windows の定期 Issue レビューはアプリ本体ではありません。配置しただけでは Skill の登録、GitHub Actions の有効化、定期実行は行われません。使用前に設定、認証、権限と副作用を確認してください。
 
+## ビルド済みアプリの利用
+
+この作業場所には Windows 11 用の検証版 `widget/release-20261121-selection/github-issue-widget.exe` があります。起動には WebView2 Runtime が必要です。これはローカルに生成した実行ファイルであり、別の checkout に自動で含まれるとは限りません。インストーラーや署名済み配布物ではありません。対象ファイルの SHA256 は `0D8AB47088B7A19233EF0D7D08CF033B681B20CA0E729FEAF73EAB74DCC98F55` です。
+
+初期状態は最前面、枠なし・ダークテーマです。タイトルバーの固定ボタンで最前面を切り替え、タイトル部のドラッグで移動し、外周のドラッグでサイズを変更します。外部リンクは `https://github.com/` とその配下に限定し、GitHub Enterprise 等の別ホストは対象外です。
+
 ## アプリの開発とビルド
 
 Windows 11、Node.js / npm、Rust 1.90.0、Visual Studio C++ Build Tools（MSVC と Windows SDK）、WebView2 Runtime が必要です。Rust は `widget/rust-toolchain.toml` により rustup で指定バージョンが選択されます。Visual Studio の x64 Native Tools Command Prompt、または `VsDevCmd.bat -arch=x64` で設定した環境を使用してください。
@@ -33,7 +39,7 @@ npm.cmd run tauri -- dev
 npm.cmd run tauri -- build --no-bundle
 ```
 
-実行ファイルは `widget/src-tauri/target/release/github-issue-widget.exe` に出力されます。ビルド後、このファイルを起動して使用できます。初期状態は最前面、枠なし・ダークテーマです。タイトルバーの固定ボタンで最前面を切り替え、タイトル部のドラッグで移動し、外周のドラッグでサイズを変更します。外部リンクは `https://github.com/` とその配下に限定し、GitHub Enterprise 等の別ホストは対象外です。
+実行ファイルは `widget/src-tauri/target/release/github-issue-widget.exe` に出力されます。ビルド後、このファイルを起動して使用できます。これは上記の検証版とは別の出力先です。
 
 ## 接続と使い方
 
@@ -45,10 +51,16 @@ GitHub の Fine-grained personal access token は対象リポジトリだけを�
 
 ボードは約60秒ごとに同期します。`status:todo`、`status:in-progress`、`status:done` ラベルを事前に GitHub 上で作成してください。存在しないラベルをアプリが自動作成することはありません。Issue 作成が途中で失敗したり結果が不明になった場合は、表示された結果と GitHub の状態を確認してから確認操作を行い、重複作成を避けてください。
 
-カードをクリックすると GitHub で Issue を開きます。新しい Issue は上部の「Issue を作成」または各列の「＋」から作成できます。状態を変更するには、カードを移動先の列へドラッグ＆ドロップします。Done に移すと Issue は Closed、Todo または In Progress に移すと Open になります。
+カードをクリックすると GitHub で Issue を開きます。新しい Issue は上部の「Issue を作成」または各列の「＋」から作成できます。「＋」は移動ではなく新規作成です。状態を変更するには、カードを移動先の列へドラッグ＆ドロップします。ドラッグ中の文字選択を防ぐため、カードと列見出しの文字は選択・コピーできません。Done に移すと Issue は Closed、Todo または In Progress に移すと Open になります。
 
 Closed の Issue はステータスラベルにかかわらず Done に表示します。Open の Issue はステータスラベルを Todo、In Progress、Done の順に優先し、該当ラベルがなければ Todo に表示します。ラベルと Open / Closed が一致しない場合は、GitHub 上の状態を確認してください。
 
 作成後に他のステータスラベルが同時に付いた場合も、作成済み Issue を示して確認を促します。GitHub 上でラベルと Open / Closed の状態を確認してください。
 
 Issue 作成フォームには作成先を表示します。接続先を変更する場合は、フォームの入力を確認して送信するか、キャンセルしてから設定を開いてください。
+
+## エラー時の確認
+
+通信エラーが出た場合はネットワーク接続と対象リポジトリを確認してください。認証・権限エラーではトークンの期限、対象リポジトリ、上記の権限を GitHub 側で確認します。レート制限が表示された場合は案内に従って時間をおいてから再試行してください。
+
+作成結果が不明な場合は、同じ Issue を再送する前に GitHub 上で題名と作成時刻を確認してください。作成済みか判断できないときは再送せず、対象と状態を確認できるまで待ってください。移動や Done への作成が途中で失敗した場合も、一部だけ反映されている可能性があります。GitHub 上の Issue とラベル、Open / Closed の状態を確認し、画面の案内に従って対応してください。

@@ -1,0 +1,8 @@
+# 対話試験の実行手順修正 02
+
+- 担当 `/root/interactive_test_prepare`。作業場所 `D:/Projects/GithubIssueWidget`。親から、`Set-Location` の失敗後も相対パスの `supervisor.py` が実行され得るという独立レビューの blocking を受け、`widget/credential-check-20261121/実行手順.md` のみ修正した。旧版 SHA256 `1FA68692BF49C3C7CBE99E0683BC2242E0B76312395D483FC68511ED321EB2D2`、新版 `A6F45828F142FDDF7B29F2BEEE7AC9FDCC9428E3A7281BC4CF1A29236DF0EB97`。先行 `interactive-test-prepare-01.md` の旧手順ハッシュは新版に適用しない。
+- PowerShell のブロック全体で、固定された絶対ディレクトリと Python を使用し、`Get-Item -LiteralPath` でディレクトリ・ファイルの実体と reparse point の有無を確認、`Get-FileHash -LiteralPath` で supervisor・recovery・診断スクリプト・EXE の SHA を照合する。one-shot の存在・Python 3.9 未満も開始前に拒否し、例外時は catch で停止する。Credential API を扱う supervisor の呼出しは絶対パスで、現在位置にある別ファイルを実行しない。
+- 事前確認コマンドが失敗した場合、実行行に到達しないことを検証した。新版の実際の PowerShell ブロックから、`& $python -B $supervisor --execute` の１行**だけ**を無害な `Write-Output 'RUN_REACHED'` に置き換え、独立した `powershell.exe -NoProfile -NonInteractive -EncodedCommand` で試行した。正常・ディレクトリ不存在・Python 不存在・ハッシュ不一致・既存 marker を模擬した５ケースはいずれも期待どおり、前者だけがマーカーへ到達し、各プロセス終了0。テストは実 credential API を呼ばない。
+- 保存した `widget/credential-check-20261121/guide-safety-01.log` SHA256 `5A129AEC71F09E67B252D5167F66985AC3145C356A04FCC69FF1637862ADFAE9`。Python のテスト監督コマンドの終了コードは0。テストでは存在しないディレクトリ・Python を文字列置換し、ハッシュ不一致は期待値の先頭文字、marker 既存は既存 `supervisor.py` の存在照合へ置換した。実際のスクリプト・EXE・資格情報は変更していない。
+- 新版の supervisor SHA256 `43C7874E56F97E4CBBDC85789501D2D70CBD6FF9D7B5B1951ED72E0F33C34EA7`、EXE SHA256 `4E459DAEEF54F55BC59497FE10DD4FC2AE4A90C18378A3B6C58DE514CB45A082` は変更されていない。実 Credential Manager の読取り・書込み、アプリ起動、実 GitHub・実 PAT の操作は行っていない。
+- 依頼で求められた手順変更と安全性の独立再レビュー、親の実行判断、本人の通常ログオン環境で指定 Python が利用できるかの確認が必要。模擬５ケースは、Windows 上の全てのファイルシステム状態や実 OS Credential API の成功を保証しない。今回認識した新たな失敗なし。先行 SHA 転記誤りは別の訂正記録で扱う。削除対象なし。

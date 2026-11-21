@@ -1,0 +1,3 @@
+﻿# manifest 型確認の失敗
+
+担当 `/root/plan_review`、場所 `D:/Projects/GithubIssueWidget`。`python -c "import json; x=json.load(open('docs/agent-runs/20261121-orchestration-continuation/sync-test-fixture-01/manifest.json',encoding='utf-8')); [(print(k,type(v).__name__,len(v),str(next(iter(v.items())) if isinstance(v,dict) and v else v[:1])[:250])) for k,v in x.items()]"` を実行し、辞書の各値を配列か辞書と誤想定したため最初の整数値で `TypeError: object of type 'int' has no len()`、終了コード1。変更なし。初回結果は証拠とせず、値の型を `isinstance(v,(list,dict))` で分岐し再実行して終了0、整数4項目と配列 `owned` 4918件を確認。以降 fixture と manifest の全 SHA 比較を実施した。失敗記録の既存該当項目の照合・追記は未実施。管理へ通知済み。

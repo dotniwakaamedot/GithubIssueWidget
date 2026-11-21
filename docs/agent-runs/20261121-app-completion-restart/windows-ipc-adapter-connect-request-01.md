@@ -1,0 +1,8 @@
+# Windows IPC 隔離経路と既存 Rust guard の接続依頼
+
+- 担当予定 `/root/windows_ipc_adapter_connect`。親 `/root` が担当 ID を確認して起動。共有 run `D:/Projects/GithubIssueWidget/docs/agent-runs/20261121-app-completion-restart/`、作業場所 `D:/Projects/GithubIssueWidget`、基準 HEAD `4961b25bec53a93439acdf5230de77f959908af0`。
+- 依存: `windows-ipc-adapter-review-01.md` の対象版レビューが blocking なしで承認されたことを確認。未承認・差分不一致なら変更せず質問。元結果 `windows-ipc-adapter-result-01.md` SHA256 `2891DEAF7F9CE658CDFF23A66C306552A7F37D145CAEF2C838DB524A278E9976`、元 `windows-ipc-adapter-01/main.rs` SHA256 `F10F86CCC567801D197B92222CE478F0D98F8CC0C4575A9DA0E9CFA8D4DED61E`、`adapter.py` `0A350F40863D3E80FA621195EAB8143E404026C594BF802CB382971EA6F421B0`。実体を照合し、別の新規専用領域にコピーする。
+- 目的: 既存 Rust `windows_ipc_guard` の模擬 IPC への道筋を活かし、監督側が事前に確定・readback した合成 service/account の journal を Rust 側が消費する経路を専用コピー内で接続。対象識別・write 前停止・監督子終了・結果と cleanup の境界を、可能な最小変更でビルド可能にする。Rust guard の無条件の実 OS 書込み禁止ゲートは維持し、実 Credential Manager API の代わりに明示的な模擬 backend だけを使った検証でつながりと失敗時停止を確かめる。適切な模擬化が安全・小規模にできない場合は無理な抽象化をせず障害と具体的次案を報告する。
+- 実行前に対象ソース・依存・試験対象と OS API 呼出し禁止をコードで確認。専用 target・オフライン依存・ダミー値・専用ログで、正常・journal 不一致／欠落・監督起動失敗／終了不明・cleanup 対象不一致を意味のある合成試験として確認。Rust のコンパイル成否、実際に実行したテストと範囲・終了コードを記録し、Python と Rust を接続していない証拠を接続済みと扱わない。OS 所有権・排他、実 Credential Manager・実 WebView・実 PAT は証明しない。
+- **実 OS 資格情報への書込みは行わない。** 独立レビューと排他・所有権・安全な終了・残留復旧等の実行前提を別途評価し、親が次段階を判断する。本人の資格情報・設定・既存 service・Git・GitHub・アプリを触らない。
+- 所有は新規 `windows-ipc-adapter-connect-01/` と `windows-ipc-adapter-connect-result-01.md` のみ。元の adapter、製品・他担当の成果を変更・削除しない。作業中は他者の変更を戻さない。対象 SHA、入力・出力・コマンド・終了状態・失敗と未確認を記録し UTF-8 を読戻して一時ファイルから確定、パスのみ通知。同種失敗2回は停止・報告。
