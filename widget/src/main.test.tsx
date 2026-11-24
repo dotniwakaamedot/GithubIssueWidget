@@ -135,6 +135,21 @@ describe("moving issues", () => {
 });
 
 describe("connection settings", () => {
+  it("sends the configured enterprise host when saving", async () => {
+    mocks.invoke.mockImplementation((command: string) => {
+      if (command === "connection_info") return Promise.resolve({ host: "https://github.com", owner: "", repo: "", has_token: false, revision: "rev" });
+      if (command === "save_connection") return Promise.resolve({ host: "https://ghe.example", owner: "a", repo: "b", has_token: true, revision: "next" });
+      return Promise.resolve(command === "list_issues" ? [] : null);
+    });
+    render(<App />);
+    await waitFor(() => expect((screen.getByLabelText("ホスト URL") as HTMLInputElement).value).toBe("https://github.com"));
+    fireEvent.change(screen.getByLabelText("ホスト URL"), { target: { value: "https://ghe.example" } });
+    fireEvent.change(screen.getByLabelText("オーナー"), { target: { value: "a" } });
+    fireEvent.change(screen.getByLabelText("リポジトリ"), { target: { value: "b" } });
+    fireEvent.change(screen.getByLabelText("トークン"), { target: { value: "synthetic" } });
+    fireEvent.click(screen.getByText("接続を確認して保存"));
+    await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("save_connection", expect.objectContaining({ host: "https://ghe.example", expectedRevision: "rev" })));
+  });
   it("sends the displayed revision and keeps the saved token state on a stale delete", async () => {
     mocks.invoke.mockImplementation((command: string) => {
       if (command === "connection_info") return Promise.resolve({ owner: "old-owner", repo: "old-repo", has_token: true, revision: "revision-1" });

@@ -10,18 +10,18 @@ pub struct CreateResult {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct PendingCreation { operation_id: String, owner: String, repo: String, status: String, number: Option<u64>, phase: String }
+pub struct PendingCreation { operation_id: String, #[serde(default = "default_host")] pub(super) host: String, owner: String, repo: String, status: String, number: Option<u64>, phase: String }
 
-fn pending_path() -> Result<PathBuf, String> { Ok(settings_path()?.with_file_name("pending-issue.json")) }
+pub(super) fn pending_path() -> Result<PathBuf, String> { Ok(settings_path()?.with_file_name("pending-issue.json")) }
 
-fn read_pending_at(path: &Path) -> Result<Option<PendingCreation>, String> {
+pub(super) fn read_pending_at(path: &Path) -> Result<Option<PendingCreation>, String> {
     let data = match fs::read(path) {
         Ok(data) => data,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(_) => return Err("作成操作の確認記録を読み取れません。".into()),
     };
     let pending: PendingCreation = serde_json::from_slice(&data).map_err(|_| "作成操作の確認記録が無効です。")?;
-    if uuid::Uuid::parse_str(&pending.operation_id).is_err() || !valid_component(&pending.owner) || !valid_component(&pending.repo) || status_label(&pending.status).is_err() || !matches!(pending.phase.as_str(), "pending" | "created_open" | "partial" | "completed") || (pending.phase == "pending" && pending.number.is_some()) || (pending.phase != "pending" && pending.number.filter(|number| *number > 0).is_none()) {
+    if uuid::Uuid::parse_str(&pending.operation_id).is_err() || normalize_host(&pending.host).ok().as_deref() != Some(&pending.host) || !valid_component(&pending.owner) || !valid_component(&pending.repo) || status_label(&pending.status).is_err() || !matches!(pending.phase.as_str(), "pending" | "created_open" | "partial" | "completed") || (pending.phase == "pending" && pending.number.is_some()) || (pending.phase != "pending" && pending.number.filter(|number| *number > 0).is_none()) {
         return Err("作成操作の確認記録が無効です。".into());
     }
     Ok(Some(pending))
@@ -104,7 +104,8 @@ where W: Fn(&Path, &PendingCreation) -> Result<(), String> {
         return Err(if error.contains("HTTP 404") { format!("必要なラベル {label} が存在しないか、リポジトリにアクセスできません。GitHub で確認してください。") } else { error });
     }
     let issues_url = format!("{repo_url}/issues");
-    let mut pending = PendingCreation { operation_id: uuid::Uuid::new_v4().to_string(), owner: owner.into(), repo: repo.into(), status: status.into(), number: None, phase: "pending".into() };
+    let host = web_root_for_api(repo_url)?;
+    let mut pending = PendingCreation { operation_id: uuid::Uuid::new_v4().to_string(), host: host.clone(), owner: owner.into(), repo: repo.into(), status: status.into(), number: None, phase: "pending".into() };
     write_pending(pending_path, &pending).map_err(|_| "作成操作の確認記録を保存できません。".to_string())?;
     let payload = serde_json::json!({"title": title, "body": body, "labels": [label]});
     let created = match send_write_locked(client.post(&issues_url).json(&payload), token, cooldown).await {
@@ -116,7 +117,7 @@ where W: Fn(&Path, &PendingCreation) -> Result<(), String> {
         Err(WriteFailure::Unknown) => return Ok(CreateResult { kind: "uncertain", number: None, url: None, message: "通信が途中で終了し、作成結果は不明です。重複を避けるため、GitHub で確認してください。".into(), operation_id: pending.operation_id }),
     };
     let number = created.get("number").and_then(|v| v.as_u64()).expect("number was validated");
-    let url = format!("https://github.com/{owner}/{repo}/issues/{number}");
+    let url = format!("{host}/{owner}/{repo}/issues/{number}");
     pending.number = Some(number);
     pending.phase = "created_open".into();
     if write_pending(pending_path, &pending).is_err() {
@@ -157,7 +158,7 @@ pub async fn create_issue(expected_owner: String, expected_repo: String, expecte
     validate_connection_revision(guard.as_ref(), &expected_revision, &Some(settings.clone()), token.as_deref())?;
     let token = token.ok_or("トークンを設定してください。")?;
     let client = reqwest::Client::builder().timeout(Duration::from_secs(20)).redirect(reqwest::redirect::Policy::none()).retry(reqwest::retry::never()).user_agent("github-task-widget").build().map_err(|_| "通信の準備に失敗しました。")?;
-    let endpoint = format!("https://api.github.com/repos/{}/{}", settings.owner, settings.repo);
+    let endpoint = format!("{}/repos/{}/{}", api_root(&settings.host)?, settings.owner, settings.repo);
     create_in_repo(&client, &endpoint, &settings.owner, &settings.repo, &token, &title, &body, &status, &cooldown, &pending_path()?).await
 }
 

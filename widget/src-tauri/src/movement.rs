@@ -71,7 +71,7 @@ pub async fn move_issue(expected_owner: String, expected_repo: String, expected_
     validate_connection_revision(guard.as_ref(), &expected_revision, &Some(settings.clone()), token.as_deref())?;
     let token = token.ok_or("トークンを設定してください。")?;
     let client = reqwest::Client::builder().timeout(Duration::from_secs(20)).redirect(reqwest::redirect::Policy::none()).retry(reqwest::retry::never()).user_agent("github-task-widget").build().map_err(|_| "通信の準備に失敗しました。")?;
-    let endpoint = format!("https://api.github.com/repos/{}/{}", settings.owner, settings.repo);
+    let endpoint = format!("{}/repos/{}/{}", api_root(&settings.host)?, settings.owner, settings.repo);
     move_in_repo(&client, &endpoint, &token, number, &expected_updated_at, &status, &cooldown).await
 }
 

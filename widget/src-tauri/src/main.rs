@@ -5,6 +5,7 @@ use sha2::{Digest, Sha256};
 use fs2::FileExt;
 use std::{fs, io::Write, path::{Path, PathBuf}, sync::atomic::{AtomicU64, Ordering}, time::{Duration, SystemTime, UNIX_EPOCH}};
 use tauri::State;
+use tauri_plugin_opener::OpenerExt;
 use tokio::sync::Mutex;
 mod creation;
 use creation::{acknowledge_creation, create_issue, pending_creation};
@@ -42,14 +43,39 @@ fn record_cooldown(cooldown: &RateCooldown, deadline: u64) -> Result<(), String>
 }
 
 #[derive(Clone, Deserialize, Serialize, PartialEq, Eq)]
-struct Settings { owner: String, repo: String, credential_id: String }
+struct Settings { #[serde(default = "default_host")] host: String, owner: String, repo: String, credential_id: String }
+
+fn default_host() -> String { "https://github.com".into() }
+
+fn normalize_host(input: &str) -> Result<String, String> {
+    let url = reqwest::Url::parse(input.trim()).map_err(|_| "ホストは HTTPS URL で入力してください。")?;
+    if url.scheme() != "https" || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.path() != "/" || url.query().is_some() || url.fragment().is_some() {
+        return Err("ホストはパスを含まない HTTPS URL で入力してください。".into());
+    }
+    Ok(url.origin().ascii_serialization())
+}
+
+fn api_root(host: &str) -> Result<String, String> {
+    let host = normalize_host(host)?;
+    Ok(if host == default_host() { "https://api.github.com".into() } else { format!("{host}/api/v3") })
+}
+
+fn require_token_for_host_change(old: Option<&Settings>, host: &str, supplied: bool) -> Result<(), String> {
+    if !supplied && old.map(|s| s.host.as_str()) != Some(host) { return Err("ホストを変更する場合は、そのホスト用のトークンを入力してください。".into()); }
+    Ok(())
+}
+
+fn web_root_for_api(endpoint: &str) -> Result<String, String> {
+    let url = reqwest::Url::parse(endpoint).map_err(|_| "接続先 URL が無効です。")?;
+    Ok(if url.scheme() != "https" || url.host_str() == Some("api.github.com") { default_host() } else { url.origin().ascii_serialization() })
+}
 
 fn matches_connection(settings: &Settings, owner: &str, repo: &str) -> bool {
     settings.owner == owner && settings.repo == repo
 }
 
 fn matches_connection_snapshot(expected: &Settings, actual: &Settings, token: &str, actual_token: Option<&str>) -> bool {
-    matches_connection(actual, &expected.owner, &expected.repo)
+    matches_connection(actual, &expected.owner, &expected.repo) && actual.host == expected.host
         && actual.credential_id == expected.credential_id
         && actual_token == Some(token)
 }
@@ -58,7 +84,7 @@ fn matches_connection_snapshot(expected: &Settings, actual: &Settings, token: &s
 struct Recovery { old_id: String, new_id: String }
 
 #[derive(Serialize)]
-struct ConnectionInfo { owner: String, repo: String, has_token: bool, revision: String }
+struct ConnectionInfo { host: String, owner: String, repo: String, has_token: bool, revision: String }
 
 #[derive(Deserialize)]
 struct ApiLabel { name: String }
@@ -145,7 +171,7 @@ fn next_page(headers: &reqwest::header::HeaderMap, endpoint: &str, repository_id
             if !is_next { continue; }
             if next.is_some() { return Err("ページ情報が重複しています。".into()); }
             let url = reqwest::Url::parse(address.strip_prefix('<').ok_or("ページ情報が無効です。")?).map_err(|_| "ページ URL が無効です。")?;
-            let alternate = format!("/repositories/{repository_id}/issues");
+            let alternate = format!("{}/repositories/{repository_id}/issues", if base.path().starts_with("/api/v3/") { "/api/v3" } else { "" });
             if url.scheme() != base.scheme() || url.host_str() != base.host_str() || url.port_or_known_default() != base.port_or_known_default() || (url.path() != base.path() && url.path() != alternate) || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() { return Err("ページ URL が許可されていません。".into()); }
             let pairs: Vec<_> = url.query_pairs().collect();
             let size = pairs.iter().filter(|(key,_)| key == "per_page").collect::<Vec<_>>();
@@ -212,7 +238,7 @@ async fn fetch_pages(client: &reqwest::Client, endpoint: &str, repository_id: u6
             if !seen_issues.insert(issue.number) { continue; }
             if !matches!(issue.state.as_str(), "open" | "closed") { return Err("Issue の状態が無効です。".into()); }
             let parsed = reqwest::Url::parse(&issue.html_url).map_err(|_| "Issue の URL が無効です。")?;
-            if parsed.scheme() != "https" || parsed.host_str() != Some("github.com") || parsed.port().is_some() || !parsed.username().is_empty() || parsed.password().is_some() { return Err("Issue の URL が許可されていません。".into()); }
+            if parsed.origin().ascii_serialization() != web_root_for_api(endpoint)? || !parsed.username().is_empty() || parsed.password().is_some() { return Err("Issue の URL が許可されていません。".into()); }
             let status = classify_issue(&issue).to_owned();
             result.push(BoardIssue { number: issue.number, title: issue.title, url: issue.html_url, status, state: issue.state, updated_at: issue.updated_at });
         }
@@ -245,7 +271,7 @@ async fn list_issues(expected_owner: String, expected_repo: String, expected_rev
         (settings, token)
     };
     let client = reqwest::Client::builder().timeout(Duration::from_secs(20)).redirect(reqwest::redirect::Policy::none()).user_agent("github-task-widget").build().map_err(|_| "通信の準備に失敗しました。")?;
-    let repo_endpoint = format!("https://api.github.com/repos/{}/{}", settings.owner, settings.repo);
+    let repo_endpoint = format!("{}/repos/{}/{}", api_root(&settings.host)?, settings.owner, settings.repo);
     let repo_url = reqwest::Url::parse(&repo_endpoint).map_err(|_| "リポジトリ URL が無効です。")?;
     let repository: ApiRepository = get_api_response(&client, repo_url, &token, &cooldown).await?.json().await.map_err(|_| "リポジトリ情報を読み取れませんでした。")?;
     if repository.id == 0 || !repository.full_name.eq_ignore_ascii_case(&format!("{}/{}", settings.owner, settings.repo)) { return Err("リポジトリ情報が接続先と一致しません。設定を確認してください。".into()); }
@@ -272,6 +298,7 @@ fn token_digest(token: Option<&str>) -> Option<[u8; 32]> {
 fn capture_connection(settings: Option<Settings>, token: Option<&str>) -> (ConnectionInfo, ConnectionSnapshot) {
     let revision = uuid::Uuid::new_v4().to_string();
     let info = ConnectionInfo {
+        host: settings.as_ref().map(|value| value.host.clone()).unwrap_or_else(default_host),
         owner: settings.as_ref().map(|value| value.owner.clone()).unwrap_or_default(),
         repo: settings.as_ref().map(|value| value.repo.clone()).unwrap_or_default(),
         has_token: token.is_some(), revision: revision.clone(),
@@ -447,6 +474,27 @@ where
 mod tests {
     use super::*;
 
+    #[test]
+    fn host_configuration_preserves_legacy_settings_and_restricts_origins() {
+        let legacy: Settings = serde_json::from_str(r#"{"owner":"a","repo":"b","credential_id":"id"}"#).unwrap();
+        assert_eq!(legacy.host, default_host());
+        assert_eq!(api_root(&legacy.host).unwrap(), "https://api.github.com");
+        assert_eq!(api_root("https://ghe.example:8443/").unwrap(), "https://ghe.example:8443/api/v3");
+        assert_eq!(web_root_for_api("https://ghe.example:8443/api/v3/repos/a/b/issues").unwrap(), "https://ghe.example:8443");
+        for invalid in ["http://ghe.example", "https://user@ghe.example", "https://ghe.example/path", "https://ghe.example/?q=1"] {
+            assert!(normalize_host(invalid).is_err(), "{invalid}");
+        }
+        assert!(require_token_for_host_change(Some(&legacy), "https://ghe.example", false).is_err());
+        assert!(require_token_for_host_change(Some(&legacy), "https://ghe.example", true).is_ok());
+        assert!(require_token_for_host_change(Some(&legacy), &default_host(), false).is_ok());
+        let endpoint = "https://ghe.example/api/v3/repos/a/b/issues";
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(reqwest::header::LINK, "<https://ghe.example/api/v3/repositories/42/issues?state=all&per_page=100&page=2>; rel=\"next\"".parse().unwrap());
+        assert!(next_page(&headers, endpoint, 42).unwrap().is_some());
+        headers.insert(reqwest::header::LINK, "<https://other.example/api/v3/repositories/42/issues?state=all&per_page=100&page=2>; rel=\"next\"".parse().unwrap());
+        assert!(next_page(&headers, endpoint, 42).is_err());
+    }
+
     fn mock_pages(pages: Vec<(u16, String)>) -> (String, std::thread::JoinHandle<()>) {
         use std::{io::{Read, Write}, net::TcpListener};
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -533,17 +581,17 @@ mod tests {
 
     #[test]
     fn board_request_must_match_the_current_shared_connection() {
-        let settings = Settings { owner: "new-owner".into(), repo: "new-repo".into(), credential_id: String::new() };
+        let settings = Settings { host: default_host(), owner: "new-owner".into(), repo: "new-repo".into(), credential_id: String::new() };
         assert!(!matches_connection(&settings, "old-owner", "old-repo"));
         assert!(matches_connection(&settings, "new-owner", "new-repo"));
     }
 
     #[test]
     fn board_snapshot_rejects_changed_or_removed_credentials() {
-        let initial = Settings { owner: "owner".into(), repo: "repo".into(), credential_id: "generation-1".into() };
+        let initial = Settings { host: default_host(), owner: "owner".into(), repo: "repo".into(), credential_id: "generation-1".into() };
         let same = initial.clone();
-        let new_token = Settings { owner: "owner".into(), repo: "repo".into(), credential_id: "generation-2".into() };
-        let other_repo = Settings { owner: "owner".into(), repo: "other".into(), credential_id: "generation-1".into() };
+        let new_token = Settings { host: default_host(), owner: "owner".into(), repo: "repo".into(), credential_id: "generation-2".into() };
+        let other_repo = Settings { host: default_host(), owner: "owner".into(), repo: "other".into(), credential_id: "generation-1".into() };
         assert!(matches_connection_snapshot(&initial, &same, "synthetic-old", Some("synthetic-old")));
         assert!(!matches_connection_snapshot(&initial, &new_token, "synthetic-old", Some("synthetic-new")));
         assert!(!matches_connection_snapshot(&initial, &same, "synthetic-old", None));
@@ -553,7 +601,7 @@ mod tests {
 
     #[test]
     fn mutation_revision_rejects_changed_settings_and_credentials() {
-        let initial = Some(Settings { owner: "owner".into(), repo: "repo".into(), credential_id: "synthetic-id".into() });
+        let initial = Some(Settings { host: default_host(), owner: "owner".into(), repo: "repo".into(), credential_id: "synthetic-id".into() });
         let (info, snapshot) = capture_connection(initial.clone(), Some("synthetic-token"));
         let serialized = serde_json::to_string(&info).unwrap();
         assert!(!serialized.contains("synthetic-token") && !serialized.contains("synthetic-id"));
@@ -562,8 +610,8 @@ mod tests {
         assert!(validate_connection_revision(Some(&snapshot), "wrong", &initial, Some("synthetic-token")).is_err());
         assert!(validate_connection_revision(Some(&snapshot), &info.revision, &initial, None).is_err());
         assert!(validate_connection_revision(Some(&snapshot), &info.revision, &initial, Some("different-token")).is_err());
-        let changed_repo = Some(Settings { owner: "owner".into(), repo: "other".into(), credential_id: "synthetic-id".into() });
-        let changed_id = Some(Settings { owner: "owner".into(), repo: "repo".into(), credential_id: "other-id".into() });
+        let changed_repo = Some(Settings { host: default_host(), owner: "owner".into(), repo: "other".into(), credential_id: "synthetic-id".into() });
+        let changed_id = Some(Settings { host: default_host(), owner: "owner".into(), repo: "repo".into(), credential_id: "other-id".into() });
         assert!(validate_connection_revision(Some(&snapshot), &info.revision, &changed_repo, Some("synthetic-token")).is_err());
         assert!(validate_connection_revision(Some(&snapshot), &info.revision, &changed_id, Some("synthetic-token")).is_err());
         let (fresh, _) = capture_connection(initial, Some("synthetic-token"));
@@ -572,7 +620,7 @@ mod tests {
 
     #[test]
     fn repeated_reads_reuse_revision_only_while_connection_is_unchanged() {
-        let settings = Some(Settings { owner: "owner".into(), repo: "repo".into(), credential_id: "synthetic-id".into() });
+        let settings = Some(Settings { host: default_host(), owner: "owner".into(), repo: "repo".into(), credential_id: "synthetic-id".into() });
         let mut slot = None;
         let first = refresh_connection_snapshot(&mut slot, settings.clone(), Some("synthetic-token"));
         let second = refresh_connection_snapshot(&mut slot, settings.clone(), Some("synthetic-token"));
@@ -732,7 +780,7 @@ mod tests {
             };
             panic!("synthetic credential write failed; category={category}");
         }
-        write_settings_at(&settings_path, &Settings { owner: "a".into(), repo: "b".into(), credential_id: id.clone() }).unwrap();
+        write_settings_at(&settings_path, &Settings { host: default_host(), owner: "a".into(), repo: "b".into(), credential_id: id.clone() }).unwrap();
 
         let mut command = Command::new(std::env::current_exe().unwrap());
         command.args(["--exact", "tests::windows_ipc_guard_child", "--ignored", "--test-threads=1", "--nocapture"])
@@ -836,7 +884,7 @@ mod tests {
         assert!(read_token(&id).unwrap().as_deref() == Some(invalid_token), "stale board action changed credential");
         entry(&id).unwrap().set_password("synthetic-ipc-secret").expect("synthetic credential restore failed");
         println!("IPC_STALE_BOARD_ACTIONS_REJECTED");
-        let changed = Settings { owner: "other".into(), repo: current.repo.clone(), credential_id: current.credential_id.clone() };
+        let changed = Settings { host: default_host(), owner: "other".into(), repo: current.repo.clone(), credential_id: current.credential_id.clone() };
         write_settings_at(&expected_path, &changed).expect("fixture settings update failed");
         let stale_save = InvokeRequest { cmd: "save_connection".into(), callback: CallbackFn(0), error: CallbackFn(1),
             url: "http://tauri.localhost".parse().unwrap(), body: InvokeBody::Json(serde_json::json!({"owner": "a", "repo": "b", "token": invalid_token, "expectedRevision": revision})),
@@ -896,8 +944,8 @@ mod tests {
         entry(&old_id).unwrap().set_password("synthetic-old").unwrap();
         println!("stage=before-new-credential-write"); std::io::stdout().flush().unwrap();
         entry(&new_id).unwrap().set_password("synthetic-new").unwrap();
-        let initial = Settings { owner: "a".into(), repo: "b".into(), credential_id: old_id.clone() };
-        let changed = Settings { owner: "a".into(), repo: "b".into(), credential_id: new_id };
+        let initial = Settings { host: default_host(), owner: "a".into(), repo: "b".into(), credential_id: old_id.clone() };
+        let changed = Settings { host: default_host(), owner: "a".into(), repo: "b".into(), credential_id: new_id };
         write_settings_at(&settings_path, &initial).unwrap();
 
         let http = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -1052,8 +1100,8 @@ mod tests {
     #[test]
     fn in_flight_board_is_not_returned_after_credential_change() {
         use std::{io::{Read, Write}, net::TcpListener, sync::{mpsc, Arc, Mutex}, thread};
-        let initial = Settings { owner: "a".into(), repo: "b".into(), credential_id: "generation-1".into() };
-        let changed = Settings { owner: "a".into(), repo: "b".into(), credential_id: "generation-2".into() };
+        let initial = Settings { host: default_host(), owner: "a".into(), repo: "b".into(), credential_id: "generation-1".into() };
+        let changed = Settings { host: default_host(), owner: "a".into(), repo: "b".into(), credential_id: "generation-2".into() };
         let page = serde_json::json!([issue_json(42, "open", &[], false)]).to_string();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}/issues", listener.local_addr().unwrap());
@@ -1352,11 +1400,11 @@ mod tests {
     fn replaces_settings_without_saving_a_token() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("settings.json");
-        write_settings_at(&path, &Settings { owner: "one".into(), repo: "first".into(), credential_id: "id1".into() }).unwrap();
-        write_settings_at(&path, &Settings { owner: "two".into(), repo: "second".into(), credential_id: "id2".into() }).unwrap();
+        write_settings_at(&path, &Settings { host: default_host(), owner: "one".into(), repo: "first".into(), credential_id: "id1".into() }).unwrap();
+        write_settings_at(&path, &Settings { host: default_host(), owner: "two".into(), repo: "second".into(), credential_id: "id2".into() }).unwrap();
         let data = fs::read_to_string(path).unwrap();
         let value: serde_json::Value = serde_json::from_str(&data).unwrap();
-        assert_eq!(value, serde_json::json!({"owner": "two", "repo": "second", "credential_id": "id2"}));
+        assert_eq!(value, serde_json::json!({"host": "https://github.com", "owner": "two", "repo": "second", "credential_id": "id2"}));
     }
 
     #[test]
@@ -1424,7 +1472,7 @@ mod tests {
     fn failed_settings_commit_keeps_previous_credential() {
         use std::{cell::RefCell, collections::HashMap};
         let credentials = RefCell::new(HashMap::from([("old".to_owned(), "old-secret".to_owned())]));
-        let candidate = Settings { owner: "new".into(), repo: "repo".into(), credential_id: "new".into() };
+        let candidate = Settings { host: default_host(), owner: "new".into(), repo: "repo".into(), credential_id: "new".into() };
         let result = commit_settings(&candidate, Some("new-secret"), "old",
             |id, secret| { credentials.borrow_mut().insert(id.into(), secret.into()); Ok(()) },
             |_| Err("simulated settings failure".into()),
@@ -1439,7 +1487,7 @@ mod tests {
     fn successful_commit_switches_reference_before_old_secret_is_removed() {
         use std::cell::RefCell;
         let events = RefCell::new(Vec::new());
-        let candidate = Settings { owner: "new".into(), repo: "repo".into(), credential_id: "new".into() };
+        let candidate = Settings { host: default_host(), owner: "new".into(), repo: "repo".into(), credential_id: "new".into() };
         commit_settings(&candidate, Some("new-secret"), "old",
             |_, _| { events.borrow_mut().push("put"); Ok(()) },
             |_| { events.borrow_mut().push("write"); Ok(()) },
@@ -1464,7 +1512,7 @@ mod tests {
     fn journal_failure_prevents_writing_credentials() {
         use std::cell::Cell;
         let wrote = Cell::new(false);
-        let candidate = Settings { owner: "new".into(), repo: "repo".into(), credential_id: "new".into() };
+        let candidate = Settings { host: default_host(), owner: "new".into(), repo: "repo".into(), credential_id: "new".into() };
         assert!(commit_settings(&candidate, Some("synthetic"), "old",
             |_, _| { wrote.set(true); Ok(()) }, |_| Ok(()),
             |_| Err("journal failed".into()), || Ok(())).is_err());
@@ -1589,24 +1637,26 @@ async fn connection_info(lock: State<'_, ConnectionLock>) -> Result<ConnectionIn
 }
 
 #[tauri::command]
-async fn save_connection(owner: String, repo: String, token: String, expected_revision: String, lock: State<'_, ConnectionLock>, cooldown: State<'_, RateCooldown>) -> Result<ConnectionInfo, String> {
+async fn save_connection(host: String, owner: String, repo: String, token: String, expected_revision: String, lock: State<'_, ConnectionLock>, cooldown: State<'_, RateCooldown>) -> Result<ConnectionInfo, String> {
     let mut guard = lock.0.lock().await;
     let _process_guard = process_lock()?;
     recover_pending()?;
     let owner = owner.trim().to_owned();
     let repo = repo.trim().to_owned();
+    let host = normalize_host(&host)?;
     if !valid_component(&owner) || !valid_component(&repo) { return Err("オーナー名またはリポジトリ名が無効です。".into()); }
     let old_settings = read_settings()?;
     let old_id = old_settings.as_ref().map(|s| s.credential_id.as_str()).unwrap_or("");
     let old_token = read_token(old_id)?;
     validate_connection_revision(guard.as_ref(), &expected_revision, &old_settings, old_token.as_deref())?;
     let supplied = !token.trim().is_empty();
+    require_token_for_host_change(old_settings.as_ref(), &host, supplied)?;
     let active_token = if supplied { token.trim() } else { old_token.as_deref().ok_or("トークンを入力してください。")? };
     let client = reqwest::Client::builder().timeout(Duration::from_secs(20)).redirect(reqwest::redirect::Policy::none()).user_agent("github-task-widget").build().map_err(|_| "通信の準備に失敗しました。")?;
-    let url = format!("https://api.github.com/repos/{owner}/{repo}");
+    let url = format!("{}/repos/{owner}/{repo}", api_root(&host)?);
     verify_connection(&client, &url, active_token, &cooldown).await?;
     let new_id = if supplied { uuid::Uuid::new_v4().to_string() } else { old_id.to_owned() };
-    let settings = Settings { owner, repo, credential_id: new_id.clone() };
+    let settings = Settings { host, owner, repo, credential_id: new_id.clone() };
     commit_settings(&settings, if supplied { Some(active_token) } else { None }, old_id,
         |id, value| entry(id)?.set_password(value).map_err(|_| "トークンを保存できませんでした。".into()),
         write_settings,
@@ -1638,11 +1688,24 @@ async fn delete_token(expected_revision: String, lock: State<'_, ConnectionLock>
     Ok(info)
 }
 
+#[tauri::command]
+async fn open_github_url(url: String, app: tauri::AppHandle, lock: State<'_, ConnectionLock>) -> Result<(), String> {
+    let _guard = lock.0.lock().await;
+    let _process_guard = process_lock()?;
+    let parsed = reqwest::Url::parse(&url).map_err(|_| "URL が無効です。")?;
+    if parsed.scheme() != "https" || !parsed.username().is_empty() || parsed.password().is_some() { return Err("URL が許可されていません。".into()); }
+    let origin = parsed.origin().ascii_serialization();
+    let current = read_settings()?.map(|value| value.host);
+    let pending = creation::read_pending_at(&creation::pending_path()?)?.map(|value| value.host);
+    if origin != default_host() && current.as_deref() != Some(&origin) && pending.as_deref() != Some(&origin) { return Err("URL が許可されていません。".into()); }
+    app.opener().open_url(url, None::<&str>).map_err(|_| "URL を開けませんでした。".into())
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(ConnectionLock::default())
         .manage(RateCooldown(AtomicU64::new(0), true))
-        .invoke_handler(tauri::generate_handler![connection_info, save_connection, delete_token, list_issues, create_issue, pending_creation, acknowledge_creation, move_issue])
+        .invoke_handler(tauri::generate_handler![connection_info, save_connection, delete_token, list_issues, create_issue, pending_creation, acknowledge_creation, move_issue, open_github_url])
         .plugin(tauri_plugin_opener::init())
         .run(tauri::generate_context!())
         .expect("failed to run widget");

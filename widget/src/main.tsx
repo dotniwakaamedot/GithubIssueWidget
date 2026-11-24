@@ -1,24 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import "./style.css";
 
 const appWindow = getCurrentWindow();
 type ResizeDirection = Parameters<typeof appWindow.startResizeDragging>[0];
 const directions: ResizeDirection[] = ["North", "South", "East", "West", "NorthEast", "NorthWest", "SouthEast", "SouthWest"];
-type Connection = { owner: string; repo: string; has_token: boolean; revision: string };
+type Connection = { host: string; owner: string; repo: string; has_token: boolean; revision: string };
 type BoardIssue = { number: number; title: string; url: string; status: "todo" | "in-progress" | "done"; state: "open" | "closed"; updated_at: string };
 type IssueStatus = BoardIssue["status"];
 type CreateResult = { kind: "created" | "partial" | "uncertain"; number: number | null; url: string | null; message: string; operation_id: string };
-type PendingCreation = { operation_id: string; owner: string; repo: string; number: number | null; phase: "pending" | "created_open" | "partial" | "completed" };
+type PendingCreation = { operation_id: string; host: string; owner: string; repo: string; number: number | null; phase: "pending" | "created_open" | "partial" | "completed" };
+const defaultHost = "https://github.com";
+const openUrl = (url: string) => invoke<void>("open_github_url", { url });
 
 export function App() {
   const [pinned, setPinned] = useState(true);
   const [error, setError] = useState("");
   const [windowError, setWindowError] = useState("");
   const [owner, setOwner] = useState("");
+  const [host, setHost] = useState(defaultHost);
   const [repo, setRepo] = useState("");
   const [token, setToken] = useState("");
   const [hasToken, setHasToken] = useState<boolean | null>(null);
@@ -52,10 +54,11 @@ export function App() {
   const pendingRequestVersion = useRef(0);
   const requestVersion = useRef(0);
   const connectionRequestVersion = useRef(0);
-  const settingsEdited = useRef({ owner: false, repo: false, token: false });
-  const applyConnection = (value: Connection) => { setConnection(value); setOwner(value.owner); setRepo(value.repo); setHasToken(value.has_token); };
+  const settingsEdited = useRef({ host: false, owner: false, repo: false, token: false });
+  const applyConnection = (value: Connection) => { setConnection(value); setHost(value.host || defaultHost); setOwner(value.owner); setRepo(value.repo); setHasToken(value.has_token); };
   const applyConnectionPreservingEdits = (value: Connection) => {
     setConnection(value); setHasToken(value.has_token);
+    if (!settingsEdited.current.host) setHost(value.host || defaultHost);
     if (!settingsEdited.current.owner) setOwner(value.owner);
     if (!settingsEdited.current.repo) setRepo(value.repo);
   };
@@ -65,7 +68,7 @@ export function App() {
     void invoke<Connection>("connection_info").then(value => {
       if (!active || version !== connectionRequestVersion.current) return;
       applyConnectionPreservingEdits(value);
-      if (!settingsEdited.current.owner && !settingsEdited.current.repo && !settingsEdited.current.token)
+      if (!settingsEdited.current.host && !settingsEdited.current.owner && !settingsEdited.current.repo && !settingsEdited.current.token)
         setShowSettings(!(value.owner && value.repo && value.has_token));
     }).catch(() => {
       if (active && version === connectionRequestVersion.current) setError("接続設定を読み込めませんでした。");
@@ -75,7 +78,7 @@ export function App() {
   function openSettings() {
     if (createOpen || moving || creating || busy) return;
     requestVersion.current++; setIssues([]); setBoardError(""); setShowSettings(true);
-    if (!showSettings) settingsEdited.current = { owner: false, repo: false, token: false };
+    if (!showSettings) settingsEdited.current = { host: false, owner: false, repo: false, token: false };
     const version = ++connectionRequestVersion.current;
     void invoke<Connection>("connection_info").then(value => {
       if (version === connectionRequestVersion.current) { applyConnectionPreservingEdits(value); setError(""); }
@@ -124,7 +127,7 @@ export function App() {
     e.preventDefault();
     if (!connection?.revision) { setError("接続設定を再読み込みしてください。"); return; }
     connectionRequestVersion.current++; setBusy(true); setNotice(""); requestVersion.current++; setIssues([]);
-    try { const result = await invoke<Connection>("save_connection", {owner, repo, token, expectedRevision: connection.revision}); applyConnection(result); setToken(""); setError(""); setNotice("接続を確認し、設定を保存しました。"); setShowSettings(false); setBoardEpoch(value => value + 1); }
+    try { const result = await invoke<Connection>("save_connection", {host, owner, repo, token, expectedRevision: connection.revision}); applyConnection(result); setToken(""); setError(""); setNotice("接続を確認し、設定を保存しました。"); setShowSettings(false); setBoardEpoch(value => value + 1); }
     catch (reason) {
       setError(typeof reason === "string" ? reason : "接続設定を保存できませんでした。");
       try { applyConnectionPreservingEdits(await invoke<Connection>("connection_info")); }
@@ -200,19 +203,20 @@ export function App() {
   const matchingResult = createResult && pending?.operation_id === createResult.operation_id ? createResult : null;
   const localResult = createResult && !matchingResult ? createResult : null;
   const pendingNumber = matchingResult?.number ?? pending?.number;
-  const pendingUrl = matchingResult?.url ?? (pending ? `https://github.com/${pending.owner}/${pending.repo}/issues${pendingNumber ? `/${pendingNumber}` : ""}` : null);
-  const localUrl = localResult?.url ?? (resultTarget ? `https://github.com/${resultTarget.owner}/${resultTarget.repo}/issues` : null);
+  const pendingUrl = matchingResult?.url ?? (pending ? `${pending.host || defaultHost}/${pending.owner}/${pending.repo}/issues${pendingNumber ? `/${pendingNumber}` : ""}` : null);
+  const localUrl = localResult?.url ?? (resultTarget ? `${resultTarget.host || defaultHost}/${resultTarget.owner}/${resultTarget.repo}/issues` : null);
   return <main>
     <header className="titlebar" onMouseDown={e => { if (e.button === 0 && !(e.target as HTMLElement).closest("button")) void run(() => appWindow.startDragging()); }}>
       <div className="brand"><span className="mark">●</span><strong>GitHub Issue Widget</strong><small>WORKSPACE</small></div>
       <nav>{!showSettings && <button disabled={moving || creating || !!pending || !!createResult || !pendingReady} onClick={() => openCreate("todo")}>Issue を作成</button>}<button disabled={moving || creating || busy || createOpen} onClick={openSettings}>設定</button><button aria-label={pinned ? "最前面固定を解除" : "最前面に固定"} aria-pressed={pinned} onClick={togglePin}>{pinned ? "固定中" : "固定"}</button><button aria-label="最小化" onClick={() => run(() => appWindow.minimize())}>−</button><button aria-label="閉じる" onClick={() => run(() => appWindow.close())}>×</button></nav>
     </header>
-    {showSettings ? <section className="content"><div className="eyebrow">YOUR ISSUES, AT A GLANCE</div><h1>接続設定</h1><p className="description">GitHub リポジトリと Fine-grained personal access token を設定します。</p>
+    {showSettings ? <section className="content"><div className="eyebrow">YOUR ISSUES, AT A GLANCE</div><h1>接続設定</h1><p className="description">GitHub リポジトリと personal access token を設定します。</p>
     <form onSubmit={saveSettings} className="settings-form">
+      <label>ホスト URL<input disabled={busy} value={host} onChange={e => { settingsEdited.current.host = true; setHost(e.target.value); }} required autoComplete="off" placeholder="https://github.com" /></label>
       <label>オーナー<input disabled={busy} value={owner} onChange={e => { settingsEdited.current.owner = true; setOwner(e.target.value); }} required autoComplete="off" /></label>
       <label>リポジトリ<input disabled={busy} value={repo} onChange={e => { settingsEdited.current.repo = true; setRepo(e.target.value); }} required autoComplete="off" /></label>
       <label>トークン<input type="password" disabled={busy} value={token} onChange={e => { settingsEdited.current.token = true; setToken(e.target.value); }} autoComplete="off" placeholder={hasToken === null ? "保存状態を確認できません" : hasToken ? "空欄なら保存済みを使用" : "Fine-grained PAT"} /></label>
-      <p>対象リポジトリに Metadata: Read と Issues: Read and write を付与してください。接続確認は Issue の書き込み権限を保証しません。</p>
+      <p>対象リポジトリに Metadata: Read と Issues: Read and write を付与してください。ホスト変更時は新しいホスト用のトークンを入力してください。接続確認は Issue の書き込み権限を保証しません。</p>
       <div className="settings-actions"><button type="submit" disabled={busy || !connection?.revision}>接続を確認して保存</button><button type="button" disabled={busy || !hasToken || !connection?.revision} onClick={removeToken}>保存済みトークンを削除</button>{connection?.has_token && connection.owner && connection.repo && <button type="button" disabled={busy} onClick={() => { connectionRequestVersion.current++; applyConnection(connection); setShowSettings(false); }}>ボードに戻る</button>}<button type="button" className="link" onClick={() => run(() => openUrl("https://github.com/"))}>GitHub を開く ↗</button></div>
     </form>
     {notice && <p role="status">{notice}</p>}{error && <p role="alert" className="error">{error}</p>}{pendingError && <p role="alert" className="error">{pendingError} <button type="button" onClick={() => void refreshPending()}>再読み込み</button></p>}{windowError && <p role="alert" className="error">{windowError}</p>}</section> : <section className="board-view">
