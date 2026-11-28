@@ -47,7 +47,7 @@ GitHub の Fine-grained personal access token は対象リポジトリだけを�
 
 接続先は `%APPDATA%/github-task-widget/settings.json` に保存し、トークンは Windows Credential Manager に保存します。保存済みトークンは画面へ読み戻しません。既存トークンを使う場合は入力欄を空のまま接続でき、設定画面からトークンを更新・削除できます。
 
-設定画面のホスト URL は既定で `https://github.com` です。GitHub Enterprise Server では `https://github.example.com` のようにサーバーの HTTPS URL を入力します。API には `/api/v3` が使われます。ホストを変更する場合は、そのホスト用のトークンを新たに入力してください。サーバー証明書を信頼できない環境では接続できません。
+設定画面のホスト URL は既定で `https://github.com` です。GitHub Enterprise Server では `https://github.example.com` のようにサーバーの HTTPS URL を入力します。API には `/api/v3` が使われます。ホストを変更する場合は、そのホスト用のトークンを新たに入力してください。現在のソースからビルドしたアプリは、Windows の信頼されたルート証明書を使って HTTPS 接続先を検証します。社内 CA を使う接続先では、その CA が Windows の証明書ストアで信頼されていることを確認してください。
 
 同じ設定領域を共有する別ウィンドウで接続先や資格情報が変更された場合、古い画面からの一覧取得・作成・移動や、設定の保存・トークン削除は中止されます。エラーが表示されたら設定を再読み込みし、対象を確認してから操作してください。アプリを介さず資格情報を直接変更する操作との完全な排他は保証されません。
 
